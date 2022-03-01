@@ -1,14 +1,16 @@
 
 use super::objects::{Obj, Node};
 use super::modules::Module;
-use super::types::TypeId;
+use super::types::{NativeFn, Type, TypeId};
+use crate::util::mem_pool::MemPool;
+
+const NODE_POOL_SZ: usize = 1000;
 
 pub struct Env {    
     modules: Vec<Module>,
     module_index: usize,
 
-    stackPtrBeg: *mut Node,
-    stackPtrCur: *mut Node,
+    node_pool: MemPool<Node, NODE_POOL_SZ>,
 }
 
 impl Env {
@@ -36,19 +38,19 @@ impl Env {
         panic!("tried to query non-declared symbol from odule")
     }
 
-    pub fn exec(&mut self) {
-        self.stackPtrCur = self.stackPtrBeg;
+    pub fn new_node(&mut self) -> *mut Node {
+        self.node_pool.acquire()
+    }
 
-        while !self.stackPtrBeg.is_null() {
-            // eval
-
-            unsafe {
-                self.stackPtrCur = (*self.stackPtrCur).next;
-            }
-        }
+    pub fn free_node(&mut self, elem: *mut Node) {
+        self.node_pool.release(elem);
     }
 }
 
-pub fn newConst<T: TypeId>(val: T) -> Obj {
+pub fn new_const<T: TypeId>(val: T) -> Obj {
     Obj::new(val.as_variant())
+}
+
+pub fn new_native(native: NativeFn) -> Obj {
+    Obj::new(Type::Native(native))
 }

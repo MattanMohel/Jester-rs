@@ -1,21 +1,28 @@
 
 use super::types::{Type, TypeId};
-use super::modules::ObjData;
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Obj {
     var: Type,
-    data: *mut ObjData,
 }
 
 pub struct Node {
-    pub val:   *mut Obj,
+    pub val: *mut Obj,
     pub next: *mut Node,
+}
+
+impl Default for Node {
+    fn default() -> Node {
+        Node {
+            val: std::ptr::null_mut(),
+            next: std::ptr::null_mut(),
+        }
+    }
 }
 
 impl Obj {
     pub fn new(var: Type) -> Obj {
-        Obj { var: var, data: std::ptr::null_mut() }
+        Obj { var: var }
     }
 
     pub fn debug(&self) {
@@ -27,6 +34,7 @@ impl Obj {
             Type::F32(x) => println!("f32 {}", x),
             Type::F64(x) => println!("f64 {}", x),
             Type::Nil()  => println!("nil"),
+            _ => print!("other"),
         };
     }
 

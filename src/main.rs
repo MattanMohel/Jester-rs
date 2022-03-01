@@ -1,7 +1,11 @@
 
 mod core;
 mod lex;
+mod util;
+use crate::core::modules::Module;
 
 fn main() {
-    println!("Hello World!")
+    
+    let mut module = Module::new(&"src\\scripts".to_string(), &"jester.jt".to_string());
+    module.debug();
 }

@@ -1,8 +1,7 @@
 
 use std::collections::HashMap;
-use std::path::Path;
 
-use super::objects::Obj;
+use super::objects::{Obj, Node};
 use crate::lex::tokens::Tok;
 
 use crate::lex::lexer::{read_file, file_to_tokens};
@@ -17,16 +16,19 @@ pub struct ObjData {
 }
 
 pub struct Module {
-    // symbol - value bindings
+    // symbol-value module bindings
     symbols: HashMap<String, Obj>,
-    // all other imported modules
+    // all imported modules
     imports: Vec<Module>,
     // tokenized source of the module
     tokens: Vec<Tok>,
     // string source of the module
     filesrc: String,
-    // mod internal alias
+    // module's internal alias
     mod_symbol: String,
+    // pointer to the beginning
+    // node of the module
+    stack_ptr: *mut Node,
 }
 
 impl Module {
@@ -40,8 +42,15 @@ impl Module {
             tokens:  file_to_tokens(&filesrc),       
             filesrc: read_file(&filepath),
             mod_symbol: name.clone(),
+            stack_ptr: std::ptr::null_mut(), //temporary
         }
     }
+
+    pub fn debug(&self) {
+        for tok in self.tokens.iter() {
+            println!("{}", tok.symbol);
+        }
+    } 
 
     pub fn has(&self, symbol: &String) -> bool {
         self.symbols.contains_key(symbol)
