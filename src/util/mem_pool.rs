@@ -1,58 +1,59 @@
 
 type ClearFn<T> = fn(*mut T) -> *mut T;
-type Constructor<T> = fn() -> *mut T;
 
-pub struct MemPool<T: Default, const Sz: usize> {
-    buffer: [T; Sz],
-    elements: [*mut T; Sz],
+/**
+ * a generic static memory pool implementation
+ * 
+ * generic type must implement Default for buffer
+ * initialization
+ * 
+ */
+
+pub struct MemPool<T: Default, const SZ: usize> {
+    // buffer of all alocated elements
+    buffer: [T; SZ],
+
+    // pointers to all free elements
+    free: [*mut T; SZ],
+
+    // an index to the next free element
     index: usize,
 
-    clear_fn: ClearFn<T>,
-    constructor: Constructor<T>,
-
-    tag: String,
+    // clears element values on acquisition
+    clear: ClearFn<T>,
 }
 
-impl<T: Default, const Sz: usize> MemPool<T, Sz> {
-    pub fn new(constructor: Constructor<T>, clear_fn: ClearFn<T>, tag: &String) -> MemPool<T, Sz> {
+impl<T: Default, const SZ: usize> MemPool<T, SZ> {
+    pub fn new(clear: ClearFn<T>) -> MemPool<T, SZ> {
 
         let mut buffer = array_init::array_init(|_| {
             T::default()
         });
 
-        let mut elements = [std::ptr::null_mut(); Sz];
-
-        for (i, elem) in buffer.iter_mut().enumerate() {
-            elements[i] = elem as *mut T;
-        }
-
         MemPool {
-            buffer: buffer,
-            elements: elements,
+            free: array_init::array_init(|i| {
+                &mut buffer[i] as *mut T
+            }),
+
             index: 0,
-            
-            clear_fn: clear_fn,
-            constructor: constructor,
-            tag: tag.clone(),
+
+            buffer: buffer,
+               
+            clear,
         }
     }
 
     pub fn acquire(&mut self) -> *mut T {
-        assert_ne!(self.index, 0);
-
-        let ptr = self.elements[self.index];
-        self.elements[self.index] = std::ptr::null_mut();
+        assert_ne!(self.index + 1, SZ);
 
         self.index += 1;
-
-        (self.clear_fn)(ptr)
+        (self.clear)(self.free[self.index - 1])
     }
 
     pub fn release(&mut self, elem: *mut T) {
         assert_ne!(self.index, 0);
 
         self.index -= 1;
-
-        self.elements[self.index] = elem;
+        self.free[self.index] = elem;
     }
 }

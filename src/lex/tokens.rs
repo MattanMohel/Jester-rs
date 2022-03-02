@@ -12,7 +12,7 @@ pub enum Spec {
 
 pub struct Tok {
     pub symbol: String,
-    pub spec: Spec,
+    pub spec:   Spec,
     
     pub line: usize,
 }

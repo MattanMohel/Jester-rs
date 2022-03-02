@@ -3,12 +3,33 @@ use super::types::{Type, TypeId};
 
 #[derive(Clone)]
 pub struct Obj {
-    var: Type,
+    pub var: Type,
 }
 
 pub struct Node {
-    pub val: *mut Obj,
-    pub next: *mut Node,
+    val: *mut Obj,
+    next: *mut Node,
+}
+
+impl Node {
+    pub fn val(&mut self) -> &mut Obj {
+        unsafe { self.val.as_mut().unwrap() }
+    }
+
+    pub fn next(&mut self) -> Option<&mut Node> {
+        unsafe { self.next.as_mut() }
+    }
+
+    pub fn copy(&self) -> Node {
+        Node { val: self.val, next: self.next }
+    }
+
+    pub fn shift(&mut self) {
+        unsafe {
+            self.next = (*self.next).next;
+            self.val  = (*self.next).val;
+        }
+    }
 }
 
 impl Default for Node {

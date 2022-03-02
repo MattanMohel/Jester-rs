@@ -5,6 +5,7 @@ use super::objects::{Obj, Node};
 use crate::lex::tokens::Tok;
 
 use crate::lex::lexer::{read_file, file_to_tokens};
+use crate::lex::parser::tokens_to_nodes;
 
 pub struct ObjData {
     symbol: String,
@@ -18,32 +19,38 @@ pub struct ObjData {
 pub struct Module {
     // symbol-value module bindings
     symbols: HashMap<String, Obj>,
+
     // all imported modules
     imports: Vec<Module>,
+
     // tokenized source of the module
     tokens: Vec<Tok>,
+
     // string source of the module
-    filesrc: String,
+    src: String,
+
     // module's internal alias
-    mod_symbol: String,
-    // pointer to the beginning
-    // node of the module
+    name: String,
+
     stack_ptr: *mut Node,
 }
 
 impl Module {
     pub fn new(root: &String, name: &String) -> Module {     
-        let filepath = format!("{}\\{}", root, name);
-        let filesrc  = read_file(&filepath);
-
-        Module {
-            symbols: HashMap::new(),
+        let mut module = Module {
+            symbols: HashMap::new(),     
             imports: Vec::new(),
-            tokens:  file_to_tokens(&filesrc),       
-            filesrc: read_file(&filepath),
-            mod_symbol: name.clone(),
-            stack_ptr: std::ptr::null_mut(), //temporary
-        }
+            tokens:  Vec::new(),  
+            src:  String::new(),
+            name:  name.clone(),
+            stack_ptr: std::ptr::null_mut(),
+        };
+
+        module.src       = read_file(&format!("{}\\{}", root, name));
+        module.tokens    = file_to_tokens(&module.src);
+        module.stack_ptr = tokens_to_nodes(&module.tokens);
+
+        module
     }
 
     pub fn debug(&self) {
