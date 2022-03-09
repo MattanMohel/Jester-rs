@@ -6,9 +6,9 @@ pub unsafe fn standard(env: &mut Env) {
     env.add_symbol("+", new_native(|env, mut args| {
         let mut ret = eval_obj(env, args.val());
 
-        while args.next().is_some() {
+        while !args.next.is_null() {
             ret.add(args.val());
-            args.shift();
+            args.shift()
         }
 
         ret
@@ -17,9 +17,9 @@ pub unsafe fn standard(env: &mut Env) {
     env.add_symbol("-", new_native(|env, mut args| {
         let mut ret = eval_obj(env, args.val());
 
-        while args.next().is_some() {
+        while !args.next.is_null() {
             ret.sub(args.val());
-            args.shift();
+            args.shift()
         }
 
         ret
@@ -28,9 +28,9 @@ pub unsafe fn standard(env: &mut Env) {
     env.add_symbol("*", new_native(|env, mut args| {
         let mut ret = eval_obj(env, args.val());
 
-        while args.next().is_some() {
+        while !args.next.is_null() {
             ret.mul(args.val());
-            args.shift();
+            args.shift()
         }
 
         ret
@@ -39,9 +39,9 @@ pub unsafe fn standard(env: &mut Env) {
     env.add_symbol("/", new_native(|env, mut args| {
         let mut ret = eval_obj(env, args.val());
 
-        while args.next().is_some() {
+        while !args.next.is_null() {
             ret.div(args.val());
-            args.shift();
+            args.shift()
         }
 
         ret

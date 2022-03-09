@@ -1,10 +1,11 @@
 
 use std::collections::HashMap;
 
-use super::objects::{Obj, Node};
 use super::modules::Module;
-use super::types::{Type, TypeId};
 use super::functions::NativeFn;
+use super::objects::{Obj, Node};
+use super::types::{Type, TypeId};
+
 use crate::util::mem_pool::MemPool;
 
 const NODE_POOL_SZ: usize = 1000;
@@ -13,25 +14,26 @@ pub struct Env {
     modules: Vec<Module>,
     prelude: HashMap<String, Obj>,
 
-    node_pool: MemPool<Node, NODE_POOL_SZ>,
-
     // runtime states
     pub eval: bool,
+    node_pool: MemPool<Node, NODE_POOL_SZ>,
 }
 
 impl Env {
     pub fn new() -> Env {
-        let node_pool = MemPool::new(|node: *mut Node| unsafe {
-            // (*node).next = std::ptr::null_mut();
-            // (*node).val  = std::ptr::null_mut();
-            node
-        });
-
         Env { 
             modules: Vec::new(), 
+
             prelude: HashMap::new(), 
-            node_pool: node_pool,
+
             eval: false,
+
+            node_pool: MemPool::new(|node| {
+                node.next = std::ptr::null_mut();
+                node.set_val_null();
+
+                node
+            }),
         }
     }
 
@@ -64,10 +66,12 @@ impl Env {
     }
 
     pub fn new_node(&mut self) -> *mut Node {
-        self.node_pool.acquire()
+        unsafe {
+            &mut (*self.node_pool.acquire())
+        }
     }
 
-    pub fn free_node(&mut self, elem: *mut Node) {
+    pub fn free_node(&mut self, elem: &mut Node) {
         self.node_pool.release(elem);
     }
 
@@ -81,6 +85,6 @@ pub fn new_const<T: TypeId>(val: T) -> Obj {
     Obj::new(val.as_variant())
 }
 
-pub fn new_native(native: fn(&mut Env, Node) -> Obj) -> Obj {
+pub fn new_native(native: fn(&mut Env, &mut Node) -> Obj) -> Obj {
     Obj::new(Type::Native(NativeFn::new(native)))
 }

@@ -1,15 +1,13 @@
 
-use crate::core::types::Type;
-
 #[derive(Clone)]
 pub enum Spec {
     Symbol,
-    Value(Type),
 
     ListBeg,
     ListEnd,
 }
 
+#[derive(Clone)]
 pub struct Tok {
     pub symbol: String,
     pub spec:   Spec,

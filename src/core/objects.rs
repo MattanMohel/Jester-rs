@@ -8,37 +8,7 @@ pub struct Obj {
 
 pub struct Node {
     val: *mut Obj,
-    next: *mut Node,
-}
-
-impl Node {
-    pub fn val(&mut self) -> &mut Obj {
-        unsafe { self.val.as_mut().unwrap() }
-    }
-
-    pub fn next(&mut self) -> Option<&mut Node> {
-        unsafe { self.next.as_mut() }
-    }
-
-    pub fn copy(&self) -> Node {
-        Node { val: self.val, next: self.next }
-    }
-
-    pub fn shift(&mut self) {
-        unsafe {
-            self.next = (*self.next).next;
-            self.val  = (*self.next).val;
-        }
-    }
-}
-
-impl Default for Node {
-    fn default() -> Node {
-        Node {
-            val: std::ptr::null_mut(),
-            next: std::ptr::null_mut(),
-        }
-    }
+    pub next: *mut Node,
 }
 
 impl Obj {
@@ -54,8 +24,10 @@ impl Obj {
             Type::I64(x) => println!("i64 {}", x),
             Type::F32(x) => println!("f32 {}", x),
             Type::F64(x) => println!("f64 {}", x),
+            Type::Node(x) => unsafe { (**x).debug(); },
             Type::Nil()  => println!("nil"),
-            _ => print!("other"),
+
+            _ => (),
         };
     }
 
@@ -184,6 +156,55 @@ impl Obj {
             Type::F32(x) => x as f64,
             Type::F64(x) => x as f64,
             _ => f64::default(),
+        }
+    }
+}
+     
+impl Default for Node {
+    fn default() -> Node {
+        Node {
+            val: std::ptr::null_mut(),
+            next: std::ptr::null_mut(),
+        }
+    }
+}
+
+impl Node {
+    pub fn val(&mut self) -> &mut Obj {
+        unsafe { self.val.as_mut().unwrap() }
+    }
+
+    pub fn debug(&mut self) {
+        println!("node: ");
+
+        let ptr = self as *mut Node;
+
+        while !ptr.is_null() {
+            unsafe {
+                (*ptr).val().debug();
+                (&mut (*ptr)).shift();
+            }
+        }
+    }
+
+    pub fn set_val(&mut self, val: &mut Obj) -> &mut Node {
+        self.val = val as *mut Obj;
+        self
+    }
+
+    pub fn set_val_null(&mut self) -> &mut Node {
+        self.val = std::ptr::null_mut();
+        self
+    }
+
+    pub fn set_next(&mut self, next: &mut Node) -> &mut Node {
+        self.next = next as *mut Node;
+        self
+    }
+
+    pub fn shift(self: &mut &mut Node) {
+        unsafe {
+            (*self) = &mut (*self.next);
         }
     }
 }

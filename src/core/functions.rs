@@ -22,10 +22,9 @@ impl JesterFn {
     pub fn invoke(&self, env: &mut Env, args: &mut Node) -> Obj {
         let bind = Bind::bind(args);
 
-        let mut ptr; 
-        unsafe { ptr = self.body.as_mut().unwrap().copy(); }
+        let mut ptr = unsafe { &mut (*self.body) };
 
-        while !ptr.next().is_some() {
+        while !ptr.next.is_null() {
             eval_obj(env, ptr.val());
             ptr.shift();
         }
@@ -36,18 +35,18 @@ impl JesterFn {
 
 #[derive(Clone)]
 pub struct NativeFn {
-    func: fn(&mut Env, Node) -> Obj
+    func: fn(&mut Env, &mut Node) -> Obj
 }
 
 impl NativeFn {
-    pub fn new(native: fn(&mut Env, Node) -> Obj) -> NativeFn {
+    pub fn new(native: fn(&mut Env, &mut Node) -> Obj) -> NativeFn {
         NativeFn {
             func: native,
         }
     }
 
     pub fn invoke(&self, env: &mut Env, args: &mut Node) -> Obj {
-        (self.func)(env, args.copy())
+        (self.func)(env, args)
     }
 }
 

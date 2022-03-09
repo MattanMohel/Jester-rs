@@ -1,5 +1,20 @@
 
-type ClearFn<T> = fn(*mut T) -> *mut T;
+type ClearFn<T> = fn(&mut T) -> &mut T;
+
+enum Elem<T> {
+    Used(T),
+    Free(*mut T),
+}
+
+impl<T> Elem<T> {
+    fn unwrap(&mut self) -> &mut T {
+        if let Elem::Used(elem) = self {
+            return elem
+        }
+
+        panic!("unwrapped 'Elem' value wasn't 'Used'");
+    }
+}
 
 /**
  * a generic static memory pool implementation
@@ -9,15 +24,11 @@ type ClearFn<T> = fn(*mut T) -> *mut T;
  * 
  */
 
-pub struct MemPool<T: Default, const SZ: usize> {
+pub struct MemPool<T: Default, const SZ: usize> {  
     // buffer of all alocated elements
-    buffer: [T; SZ],
+    buffer: [Elem<T>; SZ],
 
-    // pointers to all free elements
-    free: [*mut T; SZ],
-
-    // an index to the next free element
-    index: usize,
+    index: *mut T,
 
     // clears element values on acquisition
     clear: ClearFn<T>,
@@ -26,17 +37,15 @@ pub struct MemPool<T: Default, const SZ: usize> {
 impl<T: Default, const SZ: usize> MemPool<T, SZ> {
     pub fn new(clear: ClearFn<T>) -> MemPool<T, SZ> {
 
-        let mut buffer = array_init::array_init(|_| {
-            T::default()
+        assert!(std::mem::size_of::<T>() >= std::mem::size_of::<*mut T>());
+        
+        let buffer: array_init::array_init(|_| {
+            Elem::Used(T::default())
         });
 
-        MemPool {
-            free: array_init::array_init(|i| {
-                &mut buffer[i] as *mut T
-            }),
-
-            index: 0,
-
+        MemPool { 
+            index: buffer[0].unwrap() as *mut T,
+            
             buffer: buffer,
                
             clear,
@@ -47,13 +56,23 @@ impl<T: Default, const SZ: usize> MemPool<T, SZ> {
         assert_ne!(self.index + 1, SZ);
 
         self.index += 1;
-        (self.clear)(self.free[self.index - 1])
+
+        unsafe {
+            (self.clear)(&mut (*self.free[self.index - 1])) as *mut T
+        }
     }
 
     pub fn release(&mut self, elem: *mut T) {
-        assert_ne!(self.index, 0);
+        let index = self.index_of(elem);
+        assert!(index > 0 && index < SZ as isize);
 
         self.index -= 1;
         self.free[self.index] = elem;
+    }
+
+    fn index_of(&self, elem: *mut T) -> isize {
+        unsafe {
+            elem.offset_from(self.buffer[0].unwrap())
+        }
     }
 }

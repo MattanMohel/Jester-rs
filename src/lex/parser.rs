@@ -1,8 +1,13 @@
 
-use crate::core::objects::Node;
+use crate::core::objects::{Obj, Node};
+use crate::core::modules::Module;
+use crate::core::types::Type;
+use crate::core::env::Env;
+
 use super::tokens::{Tok, Spec};
+use super::lexer::str_to_val;
 
-
+use std::ptr::null_mut;
 
 /*
 
@@ -30,26 +35,69 @@ this form can be easily traversed and evaluated
 
 */
 
-pub fn tokens_to_nodes(tokens: &Vec<Tok>) -> *mut Node {
-    for tok in tokens.iter() {
+pub fn parse_module(env: &mut Env, module: &mut Module) -> *mut Node {
+    let mut node_cur = unsafe { &mut (*env.new_node()) };
+    let mut node_beg = node_cur as *mut Node;
+
+    let mut node_heads = Vec::new();
+
+    for tok in module.tokens().clone() {
         match &tok.spec {
             Spec::ListBeg => {
-                
+                node_cur.set_val(&mut Obj::new(Type::Node(null_mut())));
+                node_heads.push(node_cur as *mut Node);
             },
 
-            Spec::ListEnd => {
-
+            Spec::ListEnd => unsafe {
+                node_cur = &mut (*node_heads.pop().unwrap());
             },
 
             Spec::Symbol => {
+                if !module.has(&tok.symbol) {
+                    module.add(&tok.symbol, Obj::new(str_to_val(&tok.symbol)));
+                }
 
-            },
-
-            Spec::Value(val) => {
-
+                if let Type::Node(mut args) = node_cur.val().var {
+                    args = unsafe { &mut (*env.new_node()) }.set_val(module.get(&tok.symbol).unwrap());
+                    
+                    unsafe { 
+                        node_cur = &mut (*args); 
+                    }
+                }
+                else {
+                    node_cur.next = unsafe { &mut (*env.new_node()) }.set_val(module.get(&tok.symbol).unwrap());
+                    
+                    node_cur.shift();
+                }
             },
         }
     }
 
-    todo!()
+    unsafe {
+        (*node_beg).debug();
+    }
+
+    node_beg
+}
+
+/*
+
+expands macro forms at compile time
+
+________________________
+
+1: (import module-1)
+2: (println "best var {}" module-1-var)
+________________________
+
+the 'import' command has a compile-time effect
+as it needs to modify the state of the external module
+
+upon reaching a macro and parsing its full body, 'expand_macro'
+is called to establish its behaviour and expand it in place
+
+*/
+
+fn expand_macro(beg: &[Tok]) {
+
 }

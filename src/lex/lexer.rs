@@ -42,18 +42,18 @@ pub fn read_file(filepath: &String) -> String {
     panic!("filepath doesn't exist")
 }
 
-fn str_to_spec(src: &String) -> Option<Spec> {
+pub fn str_to_val(src: &String) -> Type {
     assert!( !src.is_empty() );
     
     if let Ok(is_i32) = src.parse::<i32>() {
-        return Some(Spec::Value(Type::I32(is_i32)))
+        return Type::I32(is_i32)
     }
     
     if let Ok(is_f32) = src.parse::<f32>() {
-        return Some(Spec::Value(Type::F32(is_f32)))
+        return Type::F32(is_f32)
     }
 
-    None
+    Type::Nil()
 }
 
 pub fn str_to_token(src: &String, line: usize) -> Option<Tok>{
@@ -63,12 +63,8 @@ pub fn str_to_token(src: &String, line: usize) -> Option<Tok>{
 
     let spec = if src == "(" {
         Spec::ListBeg
-    } else 
-    if src == ")" {
+    } else if src == ")" {
         Spec::ListEnd
-    } else 
-    if let Some(val) = str_to_spec(src) {
-        val
     } else {
         Spec::Symbol
     };
