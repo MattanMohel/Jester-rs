@@ -170,6 +170,10 @@ impl Default for Node {
 }
 
 impl Node {
+    pub fn new() -> Node {
+        Node { val: std::ptr::null_mut(), next: std::ptr::null_mut() }
+    }
+
     pub fn val(&mut self) -> &mut Obj {
         unsafe { self.val.as_mut().unwrap() }
     }

@@ -28,11 +28,8 @@ impl Env {
 
             eval: false,
 
-            node_pool: MemPool::new(|node| {
-                node.next = std::ptr::null_mut();
-                node.set_val_null();
-
-                node
+            node_pool: MemPool::new(|| {
+                Node::new()
             }),
         }
     }

@@ -1,78 +1,84 @@
+use std::ptr;
+use std::mem;
 
-type ClearFn<T> = fn(&mut T) -> &mut T;
+type Init<T> = fn() -> T;
 
 enum Elem<T> {
     Used(T),
-    Free(*mut T),
+    Free(usize),
 }
 
 impl<T> Elem<T> {
-    fn unwrap(&mut self) -> &mut T {
-        if let Elem::Used(elem) = self {
-            return elem
+    pub fn unwrap_used(&mut self) -> &mut T {
+        if let Elem::Used(value) = self {
+            value
+        } else {
+            panic!("unwrapperd 'Elem' was not 'Free'")
         }
+    }
 
-        panic!("unwrapped 'Elem' value wasn't 'Used'");
+    pub fn unwrap_free(&self) -> usize {
+        if let Elem::Free(next) = *self {
+            next
+        } else {
+            panic!("unwrapperd 'Elem' was not 'Free'")
+        }
     }
 }
 
-/**
- * a generic static memory pool implementation
- * 
- * generic type must implement Default for buffer
- * initialization
- * 
- */
+// a generic static memory pool implementation
 
 pub struct MemPool<T: Default, const SZ: usize> {  
     // buffer of all alocated elements
     buffer: [Elem<T>; SZ],
 
-    index: *mut T,
+    // current index to the buffer
+    head: usize,
 
     // clears element values on acquisition
-    clear: ClearFn<T>,
+    clear: Init<T>,
 }
 
 impl<T: Default, const SZ: usize> MemPool<T, SZ> {
-    pub fn new(clear: ClearFn<T>) -> MemPool<T, SZ> {
+    pub fn new(clear: Init<T>) -> MemPool<T, SZ> {
 
-        assert!(std::mem::size_of::<T>() >= std::mem::size_of::<*mut T>());
+        // assert that size of 'T' is greater than or equal to size
+        // of 'usize' to ensure correctness of later pointer arithmetic
+        assert!(mem::size_of::<T>() >= mem::size_of::<usize>());
         
-        let buffer: array_init::array_init(|_| {
-            Elem::Used(T::default())
-        });
-
         MemPool { 
-            index: buffer[0].unwrap() as *mut T,
-            
-            buffer: buffer,
-               
-            clear,
+            buffer: array_init::array_init(|i| {
+                Elem::Free(i + 1)
+            }),
+
+            head: 0,
+                     
+            clear: clear,
         }
     }
 
-    pub fn acquire(&mut self) -> *mut T {
-        assert_ne!(self.index + 1, SZ);
+    pub fn acquire(&mut self) -> &mut T {
+        assert_ne!(self.head, SZ);
 
-        self.index += 1;
-
-        unsafe {
-            (self.clear)(&mut (*self.free[self.index - 1])) as *mut T
-        }
+        self.head = self.buffer[self.head].unwrap_free();
+        self.buffer[self.head] = Elem::Used((self.clear)());
+        self.buffer[self.head].unwrap_used()
     }
 
-    pub fn release(&mut self, elem: *mut T) {
+    pub fn release(&mut self, elem: &mut T) {
         let index = self.index_of(elem);
+
+        self.buffer[index] = Elem::Free(self.head);
+        self.head = index;
+    }
+
+    fn index_of(&self, elem: &T) -> usize {
+        let index = unsafe {
+            (elem as *const T).offset_from(ptr::addr_of!(self.buffer[0]) as *const T)
+        };
+
         assert!(index > 0 && index < SZ as isize);
 
-        self.index -= 1;
-        self.free[self.index] = elem;
-    }
-
-    fn index_of(&self, elem: *mut T) -> isize {
-        unsafe {
-            elem.offset_from(self.buffer[0].unwrap())
-        }
+        index as usize
     }
 }
