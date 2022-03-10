@@ -34,13 +34,10 @@ pub struct MemPool<T: Default, const SZ: usize> {
 
     // current index to the buffer
     head: usize,
-
-    // clears element values on acquisition
-    clear: Init<T>,
 }
 
 impl<T: Default, const SZ: usize> MemPool<T, SZ> {
-    pub fn new(clear: Init<T>) -> MemPool<T, SZ> {
+    pub fn new() -> MemPool<T, SZ> {
 
         // assert that size of 'T' is greater than or equal to size
         // of 'usize' to ensure correctness of later pointer arithmetic
@@ -52,8 +49,6 @@ impl<T: Default, const SZ: usize> MemPool<T, SZ> {
             }),
 
             head: 0,
-                     
-            clear: clear,
         }
     }
 
@@ -61,7 +56,7 @@ impl<T: Default, const SZ: usize> MemPool<T, SZ> {
         assert_ne!(self.head, SZ);
 
         self.head = self.buffer[self.head].unwrap_free();
-        self.buffer[self.head] = Elem::Used((self.clear)());
+        self.buffer[self.head] = Elem::Used(T::default());
         self.buffer[self.head].unwrap_used()
     }
 
@@ -70,6 +65,10 @@ impl<T: Default, const SZ: usize> MemPool<T, SZ> {
 
         self.buffer[index] = Elem::Free(self.head);
         self.head = index;
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.head == SZ
     }
 
     fn index_of(&self, elem: &T) -> usize {

@@ -28,9 +28,7 @@ impl Env {
 
             eval: false,
 
-            node_pool: MemPool::new(|| {
-                Node::new()
-            }),
+            node_pool: MemPool::new(),
         }
     }
 
@@ -63,9 +61,7 @@ impl Env {
     }
 
     pub fn new_node(&mut self) -> *mut Node {
-        unsafe {
-            &mut (*self.node_pool.acquire())
-        }
+        &mut (*self.node_pool.acquire())
     }
 
     pub fn free_node(&mut self, elem: &mut Node) {
