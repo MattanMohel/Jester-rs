@@ -19,11 +19,12 @@ impl Module {
         }
     }
 
-    pub fn add_symbol(&mut self, symbol: &String, index: usize) {
+    pub(in super) fn add_symbol(&mut self, symbol: &String, index: usize) {
         self.symbols.insert(symbol.clone(), index);
     }
 
     // returns if module contains given symbol
+
     pub fn has_symbol(&self, env: &Env, symbol: &String) -> bool {
         if self.symbols.contains_key(symbol) {
             return true
@@ -38,7 +39,8 @@ impl Module {
         false
     }
 
-    // returns the vec index of a given symbol
+    // returns the index of a given symbol
+
     pub fn get_symbol_index(&self, symbol: &String) -> Option<usize> {
         if let Some(index) = self.symbols.get(symbol) {
             return Some(*index)
@@ -48,6 +50,7 @@ impl Module {
     }
 
     // returns the object corresponding to a given symbol
+    
     pub fn get_symbol<'a>(&self, env: &'a mut Env, symbol: &String) -> Option<&'a mut Obj> {
         if let Some(index) = self.symbols.get(symbol) {
             return Some(env.get_obj_at_mut(*index))

@@ -56,7 +56,7 @@ pub fn parse_toks(env: &mut Env, module: &mut Module, toks: &[Tok]) -> Node {
 
             Spec::Symbol => {
                 if !module.has_symbol(env, &tok.symbol) {
-                    env.add_symbol_to(module, 
+                    env.add_symbol_to_module(module, 
                         &tok.symbol.as_str(), 
                         Obj::new(str_to_typ(&tok.symbol)));
                 }
