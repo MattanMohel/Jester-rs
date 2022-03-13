@@ -38,7 +38,6 @@ pub struct MemPool<T: Default, const SZ: usize> {
 
 impl<T: Default, const SZ: usize> MemPool<T, SZ> {
     pub fn new() -> MemPool<T, SZ> {
-
         // assert that size of 'T' is greater than or equal to size
         // of 'usize' to ensure correctness of later pointer arithmetic
         assert!(mem::size_of::<T>() >= mem::size_of::<usize>());

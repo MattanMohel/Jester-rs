@@ -1,6 +1,4 @@
 use super::objects::{Obj, Node};
-use super::functions::{JesterFn, NativeFn};
-use super::env::Env;
 
 #[derive(Clone)]
 pub enum Type {
@@ -12,25 +10,12 @@ pub enum Type {
     F32(f32),
     F64(f64),
 
-    // callable types
-    Native(NativeFn),
-    Jester(JesterFn),
-
     // heap types
     Str(String),
     Ref(*mut Obj),
-    Node(*mut Node),
+    Node(Node),
 
     Nil(),
-}
-
-impl Type {
-    pub fn is_callable(&self) -> bool {
-        match self {
-            Type::Native(_) => true,
-            _ => false,
-        }
-    }
 }
 
 pub trait TypeId {
@@ -43,9 +28,9 @@ impl TypeId for *mut Obj {
     }
 }
 
-impl TypeId for *mut Node {
+impl TypeId for Node {
     fn as_variant(&self) -> Type {
-        Type::Node(*self)
+        Type::Node(self.clone())
     }
 }
 

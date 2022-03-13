@@ -4,15 +4,7 @@ mod core;
 mod util;
 mod prelude;
 
-use crate::core::env::Env;
-use crate::core::types::Type;
-use crate::core::objects::Obj;
-use crate::core::modules::Module;
 
 fn main() {
-    let mut env = Env::new();
-
-    let mut module = Module::new(&mut env, &"src\\scripts".to_string(), &"jester.jt".to_string());
-
-    module.debug();
+    let range: Vec<u32> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 }

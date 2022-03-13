@@ -1,34 +1,16 @@
 
 use super::types::{Type, TypeId};
 
+pub type Node = Vec<usize>;
+
 #[derive(Clone)]
 pub struct Obj {
-    pub var: Type,
-}
-
-pub struct Node {
-    val: *mut Obj,
-    pub next: *mut Node,
+    pub typ: Type,
 }
 
 impl Obj {
-    pub fn new(var: Type) -> Obj {
-        Obj { var: var }
-    }
-
-    pub fn debug(&self) {
-        match &self.var {
-            Type::U32(x) => println!("u32 {}", x),
-            Type::U64(x) => println!("u64 {}", x),
-            Type::I32(x) => println!("i32 {}", x),
-            Type::I64(x) => println!("i64 {}", x),
-            Type::F32(x) => println!("f32 {}", x),
-            Type::F64(x) => println!("f64 {}", x),
-            Type::Node(x) => unsafe { (**x).debug(); },
-            Type::Nil()  => println!("nil"),
-
-            _ => (),
-        };
+    pub fn new(typ: Type) -> Obj {
+        Obj { typ }
     }
 
     pub fn set(&mut self, other: &Obj) {
@@ -36,11 +18,15 @@ impl Obj {
     }
 
     pub fn set_to<T: TypeId>(&mut self, other: T) {
-        self.var = other.as_variant();
+        self.typ = other.as_variant();
     } 
+    
+    pub fn new_const<T: TypeId>(val: T) -> Obj {
+        Obj::new(val.as_variant())
+    }
 
     pub fn add(&mut self, other: &Obj) {
-        match &mut self.var {
+        match &mut self.typ {
             Type::U32(x) => *x += other.cast_u32(),
             Type::U64(x) => *x += other.cast_u64(),
             Type::I32(x) => *x += other.cast_i32(),
@@ -52,7 +38,7 @@ impl Obj {
     }
 
     pub fn sub(&mut self, other: &Obj) {
-        match &mut self.var {
+        match &mut self.typ {
             Type::U32(x) => *x -= other.cast_u32(),
             Type::U64(x) => *x -= other.cast_u64(),
             Type::I32(x) => *x -= other.cast_i32(),
@@ -64,7 +50,7 @@ impl Obj {
     }
 
     pub fn mul(&mut self, other: &Obj) {
-        match &mut self.var {
+        match &mut self.typ {
             Type::U32(x) => *x *= other.cast_u32(),
             Type::U64(x) => *x *= other.cast_u64(),
             Type::I32(x) => *x *= other.cast_i32(),
@@ -76,7 +62,7 @@ impl Obj {
     }
 
     pub fn div(&mut self, other: &Obj) {
-        match &mut self.var {
+        match &mut self.typ {
             Type::U32(x) => *x /= other.cast_u32(),
             Type::U64(x) => *x /= other.cast_u64(),
             Type::I32(x) => *x /= other.cast_i32(),
@@ -88,7 +74,7 @@ impl Obj {
     }
 
     pub fn cast_u32(&self) -> u32 {
-        match self.var {
+        match self.typ {
             Type::U32(x) => x as u32,
             Type::U64(x) => x as u32,
             Type::I32(x) => x as u32,
@@ -100,7 +86,7 @@ impl Obj {
     }
 
     pub fn cast_u64(&self) -> u64 {
-        match self.var {
+        match self.typ {
             Type::U32(x) => x as u64,
             Type::U64(x) => x as u64,
             Type::I32(x) => x as u64,
@@ -112,7 +98,7 @@ impl Obj {
     }
 
     pub fn cast_i32(&self) -> i32 {
-        match self.var {
+        match self.typ {
             Type::U32(x) => x as i32,
             Type::U64(x) => x as i32,
             Type::I32(x) => x as i32,
@@ -124,7 +110,7 @@ impl Obj {
     }
 
     pub fn cast_i64(&self) -> i64 {
-        match self.var {
+        match self.typ {
             Type::U32(x) => x as i64,
             Type::U64(x) => x as i64,
             Type::I32(x) => x as i64,
@@ -136,7 +122,7 @@ impl Obj {
     }
 
     pub fn cast_f32(&self) -> f32 {
-        match self.var {
+        match self.typ {
             Type::U32(x) => x as f32,
             Type::U64(x) => x as f32,
             Type::I32(x) => x as f32,
@@ -148,7 +134,7 @@ impl Obj {
     }
 
     pub fn cast_f64(&self) -> f64 {
-        match self.var {
+        match self.typ {
             Type::U32(x) => x as f64,
             Type::U64(x) => x as f64,
             Type::I32(x) => x as f64,
@@ -156,59 +142,6 @@ impl Obj {
             Type::F32(x) => x as f64,
             Type::F64(x) => x as f64,
             _ => f64::default(),
-        }
-    }
-}
-     
-impl Default for Node {
-    fn default() -> Node {
-        Node {
-            val: std::ptr::null_mut(),
-            next: std::ptr::null_mut(),
-        }
-    }
-}
-
-impl Node {
-    pub fn new() -> Node {
-        Node { val: std::ptr::null_mut(), next: std::ptr::null_mut() }
-    }
-
-    pub fn val(&mut self) -> &mut Obj {
-        unsafe { self.val.as_mut().unwrap() }
-    }
-
-    pub fn debug(&mut self) {
-        println!("node: ");
-
-        let ptr = self as *mut Node;
-
-        while !ptr.is_null() {
-            unsafe {
-                (*ptr).val().debug();
-                (&mut (*ptr)).shift();
-            }
-        }
-    }
-
-    pub fn set_val(&mut self, val: &mut Obj) -> &mut Node {
-        self.val = val as *mut Obj;
-        self
-    }
-
-    pub fn set_val_null(&mut self) -> &mut Node {
-        self.val = std::ptr::null_mut();
-        self
-    }
-
-    pub fn set_next(&mut self, next: &mut Node) -> &mut Node {
-        self.next = next as *mut Node;
-        self
-    }
-
-    pub fn shift(self: &mut &mut Node) {
-        unsafe {
-            (*self) = &mut (*self.next);
         }
     }
 }

@@ -1,10 +1,11 @@
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub enum Spec {
     Symbol,
-
-    ListBeg,
-    ListEnd,
+    // begining of list
+    Beg,
+    // ending of list
+    End,
 }
 
 #[derive(Clone)]
@@ -16,7 +17,7 @@ pub struct Tok {
 }
 
 impl Tok {
-    pub fn new(symbol: &String, spec: &Spec, line: usize) -> Tok {
-        Tok { symbol: symbol.clone(), spec: spec.clone(), line: line }
+    pub fn new(symbol: &String, spec: Spec, line: usize) -> Tok {
+        Tok { symbol: symbol.clone(), spec: spec, line: line }
     }
 }

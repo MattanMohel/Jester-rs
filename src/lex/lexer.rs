@@ -27,24 +27,11 @@ fn is_operater(ch: char) -> bool {
     false
 }
 
-fn is_non_token(ch: char) -> bool {
+fn is_non_tok(ch: char) -> bool {
     is_escaper(ch) || is_operater(ch)
 }
 
-pub fn read_file(filepath: &String) -> String {
-
-    println!("filepath: {}", filepath);
-
-    if let Ok(src) = fs::read_to_string(filepath) {
-        return src
-    }
-
-    panic!("filepath doesn't exist")
-}
-
-pub fn str_to_val(src: &String) -> Type {
-    assert!( !src.is_empty() );
-    
+pub fn str_to_typ(src: &String) -> Type {    
     if let Ok(is_i32) = src.parse::<i32>() {
         return Type::I32(is_i32)
     }
@@ -56,60 +43,64 @@ pub fn str_to_val(src: &String) -> Type {
     Type::Nil()
 }
 
-pub fn str_to_token(src: &String, line: usize) -> Option<Tok>{
+pub fn str_to_tok(src: &String, line: usize) -> Option<Tok>{
     if src.is_empty() || is_escaper(src.chars().nth(0).unwrap()) {
         return None
     }
 
     let spec = if src == "(" {
-        Spec::ListBeg
+        Spec::Beg
     } else if src == ")" {
-        Spec::ListEnd
+        Spec::End
     } else {
         Spec::Symbol
     };
 
-    Some(Tok::new(src, &spec, line))
+    Some(Tok::new(src, spec, line))
 }
 
-pub fn file_to_tokens(src: &String) -> Vec<Tok> {
+pub fn to_toks(src: &String) -> Vec<Tok> {
 
-    let mut tokens = Vec::new();
-    let mut is_string = false;
+    let mut toks = Vec::new();
     
-    let mut parenth_depth = 0isize;
+    // line count
     let mut line  = 0usize;
-  
+    // parenthesis depth
+    let mut depth = 0isize;
+    // in string literal
+    let mut str = false;
+
+    // lexed buffer
     let mut lex = String::new();
 
     for ch in src.chars() {
-        if is_string || !is_non_token(ch) {
+        if str || !is_non_tok(ch) {
             lex.push(ch);
             continue;
         }
 
-        if let Some(tok) = str_to_token(&lex, line) {
-            tokens.push(tok);
+        if let Some(tok) = str_to_tok(&lex, line) {
+            toks.push(tok);
             lex.clear();
         }
 
         match ch {
-            '(' => parenth_depth += 1,
-            ')' => parenth_depth -= 1,
+            '(' => depth += 1,
+            ')' => depth -= 1,
 
-            '\"' => is_string = !is_string,
+            '\"' => str = !str,
             
             '\n' => line += 1,
             
             _ => ()
         }
 
-        if let Some(tok) = str_to_token(&ch.to_string(), line) {
-            tokens.push(tok);
+        if let Some(tok) = str_to_tok(&ch.to_string(), line) {
+            toks.push(tok);
         }
     }
 
-    assert!(parenth_depth == 0);
+    assert!(depth == 0);
 
-    tokens
+    toks
 }

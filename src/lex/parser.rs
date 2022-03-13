@@ -1,17 +1,17 @@
 
+use crate::core::env::Env;
 use crate::core::objects::{Obj, Node};
 use crate::core::modules::Module;
 use crate::core::types::Type;
-use crate::core::env::Env;
 
+use super::lexer::str_to_typ;
 use super::tokens::{Tok, Spec};
-use super::lexer::str_to_val;
-
-use std::ptr::null_mut;
 
 /*
 
 parses code into recursive linked lists of Objects
+
+for effeciency the linked lists are represented by vectors
 
 ________________________
 
@@ -35,49 +35,36 @@ this form can be easily traversed and evaluated
 
 */
 
-pub fn parse_module(env: &mut Env, module: &mut Module) -> *mut Node {
-    let mut node_cur = unsafe { &mut (*env.new_node()) };
-    let mut node_beg = node_cur as *mut Node;
+pub fn parse_toks(env: &mut Env, module: &mut Module, toks: &[Tok]) -> Node {
+    let mut node = Vec::new();
 
-    let mut node_heads = Vec::new();
+    for (i, tok) in toks.iter().enumerate() {
+        match tok.spec {
+            
+            Spec::Beg => {
+                let symbol = env.gensym_unique();
+                let new_node = parse_toks(env, module, &toks[i..]);
 
-    for tok in module.tokens().clone() {
-        match &tok.spec {
-            Spec::ListBeg => {
-                node_cur.set_val(&mut Obj::new(Type::Node(null_mut())));
-                node_heads.push(node_cur as *mut Node);
+                let obj_index = env.add_symbol(
+                    symbol.as_str(), 
+                    Obj::new(Type::Node(new_node)));
+
+                node.push(obj_index);
             },
 
-            Spec::ListEnd => unsafe {
-                node_cur = &mut (*node_heads.pop().unwrap());
-            },
+            Spec::End => break,
 
             Spec::Symbol => {
-                if !module.has(&tok.symbol) {
-                    module.add(&tok.symbol, Obj::new(str_to_val(&tok.symbol)));
+                if !module.has_symbol(env, &tok.symbol) {
+                    env.add_symbol_to(module, 
+                        &tok.symbol.as_str(), 
+                        Obj::new(str_to_typ(&tok.symbol)));
                 }
-
-                if let Type::Node(mut args) = node_cur.val().var {
-                    args = unsafe { &mut (*env.new_node()) }.set_val(module.get(&tok.symbol).unwrap());
-                    
-                    unsafe { 
-                        node_cur = &mut (*args); 
-                    }
-                }
-                else {
-                    node_cur.next = unsafe { &mut (*env.new_node()) }.set_val(module.get(&tok.symbol).unwrap());
-                    
-                    node_cur.shift();
-                }
-            },
+            }
         }
     }
 
-    unsafe {
-        (*node_beg).debug();
-    }
-
-    node_beg
+    node
 }
 
 /*
@@ -98,6 +85,3 @@ is called to establish its behaviour and expand it in place
 
 */
 
-fn expand_macro(beg: &[Tok]) {
-
-}
