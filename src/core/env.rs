@@ -3,10 +3,21 @@ use super::objects::Obj;
 use super::modules::Module;
 
 pub struct ObjData {
-    pub(in super::env) is_pub:    bool,
-    pub(in super::env) is_const:  bool,
-    pub(in super::env) module:    usize,
+    pub is_pub:    bool,
+    pub is_const:  bool,
+    pub module:    usize,
     pub ref_count: usize,
+}
+
+impl ObjData {
+    pub fn new() -> Self {
+        Self { 
+            is_pub:    true, 
+            is_const:  true, 
+            module:    0,
+            ref_count: 0,
+        }
+    }
 }
 
 impl ObjData {
@@ -68,14 +79,7 @@ impl Env {
         assert!( !Env::is_disallowed_symbol(&symbol) );
 
         self.symbols.push(obj);
-
-        let data =  ObjData { 
-            is_pub:    true, 
-            is_const:  true, 
-            module:    0,
-            ref_count: 0,
-        };
-        self.symbol_data.push(data);
+        self.symbol_data.push(ObjData::new());
 
         let index = self.symbols.len() - 1;
         self.modules[0].add_symbol(&symbol, index);
@@ -91,14 +95,7 @@ impl Env {
         assert!( !Env::is_disallowed_symbol(&symbol) );
 
         self.symbols.push(obj);
-
-        let data =  ObjData { 
-            is_pub:    true, 
-            is_const:  true, 
-            module:    0,
-            ref_count: 0,
-        };
-        self.symbol_data.push(data);
+        self.symbol_data.push(ObjData::new());
 
         let index = self.symbols.len() - 1;
         module.add_symbol(&symbol, index);

@@ -1,4 +1,6 @@
 
+#![allow(dead_code)]
+
 mod lex;
 mod core;
 mod util;
