@@ -23,8 +23,6 @@ impl Module {
         self.symbols.insert(symbol.clone(), index);
     }
 
-    // returns if module contains given symbol
-
     pub fn has_symbol(&self, env: &Env, symbol: &String) -> bool {
         if self.symbols.contains_key(symbol) {
             return true

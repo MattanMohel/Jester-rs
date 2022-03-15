@@ -1,6 +1,8 @@
 
 use super::types::{Type, TypeId};
 
+use std::fmt;
+
 pub type Node = Vec<usize>;
 
 #[derive(Clone)]
@@ -8,9 +10,19 @@ pub struct Obj {
     pub typ: Type,
 }
 
+impl fmt::Display for Obj {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
 impl Obj {
     pub fn new(typ: Type) -> Obj {
         Obj { typ }
+    }
+
+    pub fn new_const<T: TypeId>(val: T) -> Obj {
+        Obj::new(val.as_variant())
     }
 
     pub fn set(&mut self, other: &Obj) {
@@ -21,8 +33,27 @@ impl Obj {
         self.typ = other.as_variant();
     } 
     
-    pub fn new_const<T: TypeId>(val: T) -> Obj {
-        Obj::new(val.as_variant())
+    pub fn to_string(&self) -> String {
+        match &self.typ {
+            Type::F32(x) => x.to_string(),
+            Type::F64(x) => x.to_string(),
+            Type::U32(x) => x.to_string(),
+            Type::U64(x) => x.to_string(),
+            Type::I32(x) => x.to_string(),
+            Type::I64(x) => x.to_string(),
+            Type::Nil() => String::from("nil"),
+            
+            Type::Str(x) => x.clone(),
+
+            Type::Ref(x) => format!("'{}", unsafe { 
+                (**x).to_string() 
+            }),
+
+            Type::Node(x) => {
+                // print object values
+                format!("node")
+            },
+        }
     }
 
     pub fn add(&mut self, other: &Obj) {

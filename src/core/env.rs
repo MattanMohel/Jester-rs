@@ -37,43 +37,32 @@ impl Env {
         }
     }
 
-    // generates a garaunteed unique variable symbol
-    // follows the form: '__gensym-###___
+    // generates a garaunteed unique variable symbol (__gensym-###__)
 
-    pub fn gensym_unique(&mut self) -> String {
-        const PREFIX:  &str = "__gensym-";
-        const POSTFIX: &str = "__";
-        
-        let symbol = format!("{}{}{}", PREFIX, self.curr_id, POSTFIX);
+    pub fn gen_symbol_unique(&mut self) -> String {
+        let symbol = format!("{}{}{}", "__gensym", self.curr_id, "__");
         self.curr_id += 1;
 
         symbol
     }
 
-    // checks if a given symbol is allowed by the env
-    // a symbol is disallowed if it conflicts with gensym (see 'gensym_unique')
-
-    fn is_disallowed_symbol(symbol: &String) -> bool {
-        const PREFIX:  &str = "__gensym-";
-        const POSTFIX: &str = "__";
-        
-        let mut index = -1_isize;        
+    fn is_disallowed_symbol(symbol: &String) -> bool {     
+        let mut index = -1isize;        
         for (i, c) in (&symbol[8..]).chars().enumerate() {
             if !c.is_numeric() {
                 index = i as isize;
             }
         }
 
-        let beg = PREFIX == &symbol[0..PREFIX.len()];
-        let end = index != -1 && POSTFIX == &symbol[index as usize..];
+        let beg = "__gensym" == &symbol[0.."__gensym".len()];
+        let end = index != -1 && "__" == &symbol[index as usize..];
         
         beg && end
     }
 
     // adds a given symbol to the default 'prelude' module
-    // such a symbol, by default, is const and public
 
-    pub fn add_symbol(&mut self, symbol: &str, obj: Obj) -> usize {
+    pub fn add_symbol<T: ToString>(&mut self, symbol: &T, obj: Obj) -> usize {
         let symbol = symbol.to_string();
 
         assert!( !Env::is_disallowed_symbol(&symbol) );
@@ -95,9 +84,8 @@ impl Env {
     }
 
     // adds a given symbol to a given module
-    // such a symbol, by default, is const and public
 
-    pub fn add_symbol_to_module(&mut self, module: &mut Module, symbol: &str, obj: Obj) -> usize {
+    pub fn add_symbol_to_module<T: ToString>(&mut self, module: &mut Module, symbol: &T, obj: Obj) -> usize {
         let symbol = symbol.to_string();
 
         assert!( !Env::is_disallowed_symbol(&symbol) );
@@ -132,9 +120,11 @@ impl Env {
 
     // returns mut module by specified name
 
-    pub fn get_mod_mut(&mut self, module_name: &String) -> Option<&mut Module> {
+    pub fn get_mod_mut<T: ToString>(&mut self, module_name: &T) -> Option<&mut Module> {
+        let module_name = module_name.to_string();
+
         for module in self.modules.iter_mut() {
-            if module.name() == module_name {
+            if *module.name() == module_name {
                 return Some(module)
             }
         }
@@ -156,9 +146,11 @@ impl Env {
 
     // returns mut object by specified name
 
-    pub fn get_obj_mut(&mut self, symbol: &String) -> Option<&mut Obj> {
+    pub fn get_obj_mut<T: ToString>(&mut self, symbol: &T) -> Option<&mut Obj> {
+        let symbol = symbol.to_string();
+
         for module in self.modules.iter() {
-            if let Some(index) = module.get_symbol_index(symbol) {
+            if let Some(index) = module.get_symbol_index(&symbol) {
                 return Some(&mut self.symbols[index])
             }
         }

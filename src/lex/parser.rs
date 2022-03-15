@@ -42,22 +42,20 @@ pub fn parse_toks(env: &mut Env, module: &mut Module, toks: &[Tok]) -> Node {
         match tok.spec {
             
             Spec::Beg => {
-                let symbol = env.gensym_unique();
-                let new_node = parse_toks(env, module, &toks[i..]);
-
-                let obj_index = env.add_symbol(
-                    symbol.as_str(), 
-                    Obj::new(Type::Node(new_node)));
-
-                node.push(obj_index);
+                // create an anonymous symbol for the new list
+                let gen = env.gen_symbol_unique();
+                // recursively parse the new list's nodes
+                let new = parse_toks(env, module, &toks[i..]);
+                // create and push the new list's index
+                node.push(
+                    env.add_symbol(&gen, Obj::new(Type::Node(new))));       
             },
 
             Spec::End => break,
 
             Spec::Symbol => {
                 if !module.has_symbol(env, &tok.symbol) {
-                    env.add_symbol_to_module(module, 
-                        &tok.symbol.as_str(), 
+                    env.add_symbol_to_module(module, &tok.symbol, 
                         Obj::new(str_to_typ(&tok.symbol)));
                 }
             }
