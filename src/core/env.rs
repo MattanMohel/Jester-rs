@@ -1,39 +1,13 @@
 
-use super::objects::Obj;
-use super::modules::Module;
+use super::objects::{Obj, ObjData};
+use super::modules::Mod;
 
-pub struct ObjData {
-    pub is_pub:    bool,
-    pub is_const:  bool,
-    pub module:    usize,
-    pub ref_count: usize,
-}
-
-impl ObjData {
-    pub fn new() -> Self {
-        Self { 
-            is_pub:    true, 
-            is_const:  true, 
-            module:    0,
-            ref_count: 0,
-        }
-    }
-}
-
-impl ObjData {
-    pub fn is_pub(&self) -> bool {
-        self.is_pub
-    }
-
-    pub fn is_const(&self) -> bool {
-        self.is_const
-    }
-}
+const GEN_SYM: &str = "$gensym";
 
 pub struct Env {
     symbol_data: Vec<ObjData>,
     symbols:     Vec<Obj>,
-    modules:     Vec<Module>,
+    modules:     Vec<Mod>,
 
     curr_id: usize
 }
@@ -43,115 +17,118 @@ impl Env {
         Self {
             symbol_data: Vec::new(),
             symbols:     Vec::new(),
-            modules: vec![Module::new("prelude")],
+            modules: vec![Mod::new("prelude")],
             curr_id: 0
         }
     }
+    
+    pub fn add_symbol<T: Into<String>>(&mut self, symbol: T, obj: Obj) {
+        let symbol = symbol.into();
 
-    // generates a garaunteed unique variable symbol (__gensym-###__)
+        assert!(Env::is_allowed_symbol(&symbol));
+
+        self.symbol_data.push( 
+            ObjData {
+                is_pub:    true,
+                is_const:  false,
+                module:    0,
+                ref_count: 0
+            }
+        );
+
+        self.symbols.push(obj);
+
+        let index = self.obj_index();
+        self.modules[0].add_symbol(index, &symbol);
+    }
+
+    pub fn add_symbol_to<T: Into<String>>(&mut self, module: T, symbol: T, obj: Obj) {
+        let module = module.into();
+        let symbol = symbol.into();
+
+        assert!(Env::is_allowed_symbol(&symbol));
+
+        self.symbol_data.push( 
+            ObjData {
+                is_pub:    true,
+                is_const:  false,
+                module:    0,
+                ref_count: 0
+            }
+        );
+
+        self.symbols.push(obj);
+
+        assert!(self.has_mod(&module));
+        let index = self.obj_index();
+        self.get_mod_mut(&module).unwrap().add_symbol(index, &symbol);
+    }
 
     pub fn gen_symbol_unique(&mut self) -> String {
-        let symbol = format!("{}{}{}", "__gensym", self.curr_id, "__");
+        let symbol = format!("{}{}{}{}{}", "__", GEN_SYM, "-", self.curr_id, "__");
         self.curr_id += 1;
 
         symbol
     }
 
-    fn is_disallowed_symbol(symbol: &String) -> bool {     
-        let mut index = -1isize;        
-        for (i, c) in (&symbol[8..]).chars().enumerate() {
-            if !c.is_numeric() {
-                index = i as isize;
+    /// Statistics
+    
+    pub fn obj_index(&self) -> usize {
+        self.symbols.len() - 1
+    }
+
+    pub fn has_mod<T: Into<String>>(&self, symbol: T) -> bool {
+        let symbol = symbol.into();
+        for module in self.modules.iter() {
+            if *module.name() == symbol {
+                return true;
             }
         }
-
-        let beg = "__gensym" == &symbol[0.."__gensym".len()];
-        let end = index != -1 && "__" == &symbol[index as usize..];
-        
-        beg && end
+        false
     }
 
-    // adds a given symbol to the default 'prelude' module
-
-    pub fn add_symbol<T: ToString>(&mut self, symbol: &T, obj: Obj) -> usize {
-        let symbol = symbol.to_string();
-
-        assert!( !Env::is_disallowed_symbol(&symbol) );
-
-        self.symbols.push(obj);
-        self.symbol_data.push(ObjData::new());
-
-        let index = self.symbols.len() - 1;
-        self.modules[0].add_symbol(&symbol, index);
-
-        index
+    fn is_allowed_symbol(symbol: &String) -> bool {   
+        if let Some(_) = symbol.find(GEN_SYM)  {
+            return false;
+        }
+        true
     }
 
-    // adds a given symbol to a given module
+    /// Getters
 
-    pub fn add_symbol_to_module<T: ToString>(&mut self, module: &mut Module, symbol: &T, obj: Obj) -> usize {
-        let symbol = symbol.to_string();
-
-        assert!( !Env::is_disallowed_symbol(&symbol) );
-
-        self.symbols.push(obj);
-        self.symbol_data.push(ObjData::new());
-
-        let index = self.symbols.len() - 1;
-        module.add_symbol(&symbol, index);
-
-        index
-    }
-
-    // returns module at the specified index
-
-    pub fn get_mod_at(&self, index: usize) -> &Module {
+    pub fn get_mod_at(&self, index: usize) -> &Mod {
         &self.modules[index]
     }
 
-    // returns mut module at the specified index
-
-    pub fn get_mod_at_mut(&mut self, index: usize) -> &mut Module {
+    pub fn get_mod_at_mut(&mut self, index: usize) -> &mut Mod {
         &mut self.modules[index]
     }
 
-    // returns mut module by specified name
-
-    pub fn get_mod_mut<T: ToString>(&mut self, module_name: &T) -> Option<&mut Module> {
-        let module_name = module_name.to_string();
-
+    pub fn get_mod_mut<T: Into<String>>(&mut self, symbol: T) -> Option<&mut Mod> {
+        let symbol = symbol.into();
         for module in self.modules.iter_mut() {
-            if *module.name() == module_name {
-                return Some(module)
+            if *module.name() == symbol {
+                return Some(module);
             }
         }
-
         None
     }
-
-    // returns object at the specified index
 
     pub fn get_obj_at(&self, index: usize) -> &Obj {
         &self.symbols[index]
     }
-
-    // returns mut object at the specified index
     
     pub fn get_obj_at_mut(&mut self, index: usize) -> &mut Obj {
         &mut self.symbols[index]
     }
 
-    // returns mut object by specified name
-
-    pub fn get_obj_mut<T: ToString>(&mut self, symbol: &T) -> Option<&mut Obj> {
-        let symbol = symbol.to_string();
-
+    pub fn get_obj_mut<T: Into<String>>(&mut self, symbol: T) -> Option<&mut Obj> {
+        let symbol = symbol.into();
         for module in self.modules.iter() {
-            if let Some(index) = module.get_symbol_index(&symbol) {
-                return Some(&mut self.symbols[index])
+            if let Some(index) = module.symbol_index(self, &symbol) {
+                return Some(&mut self.symbols[index]);
             }
         }
-
         None 
     }
 }

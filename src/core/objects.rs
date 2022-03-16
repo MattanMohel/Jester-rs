@@ -176,3 +176,10 @@ impl Obj {
         }
     }
 }
+
+pub struct ObjData {
+    pub is_pub:    bool,
+    pub is_const:  bool,
+    pub module:    usize,
+    pub ref_count: usize,
+}

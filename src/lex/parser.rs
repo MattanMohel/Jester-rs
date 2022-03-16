@@ -1,10 +1,10 @@
 
 use crate::core::env::Env;
 use crate::core::objects::{Obj, Node};
-use crate::core::modules::Module;
+use crate::core::modules::Mod;
 use crate::core::types::Type;
 
-use super::lexer::str_to_typ;
+use super::lexer::to_type;
 use super::tokens::{Tok, Spec};
 
 /*
@@ -35,28 +35,25 @@ this form can be easily traversed and evaluated
 
 */
 
-pub fn parse_toks(env: &mut Env, module: &mut Module, toks: &[Tok]) -> Node {
+pub fn parse_toks(env: &mut Env, module: &mut Mod, toks: &[Tok]) -> Node {
     let mut node = Vec::new();
 
     for (i, tok) in toks.iter().enumerate() {
         match tok.spec {
             
             Spec::Beg => {
-                // create an anonymous symbol for the new list
                 let gen = env.gen_symbol_unique();
-                // recursively parse the new list's nodes
                 let new = parse_toks(env, module, &toks[i..]);
-                // create and push the new list's index
-                node.push(
-                    env.add_symbol(&gen, Obj::new(Type::Node(new))));       
+                env.add_symbol(&gen, Obj::new(Type::Node(new)));     
+                
+                node.push(env.obj_index());
             },
 
             Spec::End => break,
 
             Spec::Symbol => {
                 if !module.has_symbol(env, &tok.symbol) {
-                    env.add_symbol_to_module(module, &tok.symbol, 
-                        Obj::new(str_to_typ(&tok.symbol)));
+                    env.add_symbol_to(module.name(), &tok.symbol, Obj::new(to_type(&tok.symbol)));
                 }
             }
         }

@@ -31,7 +31,7 @@ fn is_non_tok(ch: char) -> bool {
     is_escaper(ch) || is_operater(ch)
 }
 
-pub fn str_to_typ(src: &String) -> Type {    
+pub fn to_type(src: &String) -> Type {    
     if let Ok(is_i32) = src.parse::<i32>() {
         return Type::I32(is_i32)
     }
@@ -43,7 +43,7 @@ pub fn str_to_typ(src: &String) -> Type {
     Type::Nil()
 }
 
-pub fn str_to_tok(src: &String, line: usize) -> Option<Tok>{
+pub fn to_tok(src: &String, line: usize) -> Option<Tok>{
     if src.is_empty() || is_escaper(src.chars().nth(0).unwrap()) {
         return None
     }
@@ -79,7 +79,7 @@ pub fn to_toks(src: &String) -> Vec<Tok> {
             continue;
         }
 
-        if let Some(tok) = str_to_tok(&lex, line) {
+        if let Some(tok) = to_tok(&lex, line) {
             toks.push(tok);
             lex.clear();
         }
@@ -95,7 +95,7 @@ pub fn to_toks(src: &String) -> Vec<Tok> {
             _ => ()
         }
 
-        if let Some(tok) = str_to_tok(&ch.to_string(), line) {
+        if let Some(tok) = to_tok(&ch.to_string(), line) {
             toks.push(tok);
         }
     }

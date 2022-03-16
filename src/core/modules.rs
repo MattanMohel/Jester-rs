@@ -4,23 +4,23 @@ use super::objects::Obj;
 
 use std::collections::HashMap;
 
-pub struct Module {
+pub struct Mod {
     name: String,
     symbols: HashMap<String, usize>,
     imports: Vec<usize>,
 }
 
-impl Module {
-    pub fn new(name: &str) -> Self {
+impl Mod {
+    pub fn new<T: Into<String>>(name: T) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.into(),
             symbols: HashMap::new(),
             imports: Vec::new(),
         }
     }
 
-    pub(in super) fn add_symbol(&mut self, symbol: &String, index: usize) {
-        self.symbols.insert(symbol.clone(), index);
+    pub fn add_symbol<T: Into<String>>(&mut self, index: usize, symbol: T) {
+        self.symbols.insert(symbol.into(), index);
     }
 
     pub fn has_symbol(&self, env: &Env, symbol: &String) -> bool {
@@ -37,26 +37,14 @@ impl Module {
         false
     }
 
-    // returns the index of a given symbol
-
-    pub fn get_symbol_index(&self, symbol: &String) -> Option<usize> {
+    pub fn symbol_index(&self, env: &Env, symbol: &String) -> Option<usize> {
         if let Some(index) = self.symbols.get(symbol) {
             return Some(*index)
         }
 
-        None
-    }
-
-    // returns the object corresponding to a given symbol
-    
-    pub fn get_symbol<'a>(&self, env: &'a mut Env, symbol: &String) -> Option<&'a mut Obj> {
-        if let Some(index) = self.symbols.get(symbol) {
-            return Some(env.get_obj_at_mut(*index))
-        }
-
         for module in self.imports.iter() {
-            if let Some(obj) = env.get_mod_at(*module).get_symbol_index(symbol) {
-                return Some(env.get_obj_at_mut(obj))
+            if let Some(index) = env.get_mod_at(*module).symbol_index(env, symbol) {
+                return Some(index)
             }
         }
 
