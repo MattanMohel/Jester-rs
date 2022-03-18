@@ -1,15 +1,22 @@
 
+use maplit::hashmap;
+
 use super::objects::{Obj, ObjData};
 use super::modules::Mod;
 
+use std::collections::HashMap;
+
 const GEN_SYM: &str = "$gensym";
+const PRELUDE: &str = "prelude";
+
 
 pub struct Env {
     symbol_data: Vec<ObjData>,
     symbols:     Vec<Obj>,
-    modules:     Vec<Mod>,
 
-    curr_id: usize
+    modules:     HashMap<String, Mod>,
+
+    gen_sym_id: usize,
 }
 
 impl Env {
@@ -17,8 +24,10 @@ impl Env {
         Self {
             symbol_data: Vec::new(),
             symbols:     Vec::new(),
-            modules: vec![Mod::new("prelude")],
-            curr_id: 0
+            modules: hashmap! { 
+                String::from(PRELUDE) => Mod::new(&String::from(PRELUDE)) 
+            },
+            gen_sym_id: 0
         }
     }
     
@@ -38,8 +47,8 @@ impl Env {
 
         self.symbols.push(obj);
 
-        let index = self.obj_index();
-        self.modules[0].add_symbol(index, &symbol);
+        let index = self.obj_count();
+        self.module_mut(PRELUDE).unwrap().add_symbol(index, &symbol);
     }
 
     pub fn add_symbol_to<T: Into<String>>(&mut self, module: T, symbol: T, obj: Obj) {
@@ -60,71 +69,51 @@ impl Env {
         self.symbols.push(obj);
 
         assert!(self.has_mod(&module));
-        let index = self.obj_index();
-        self.get_mod_mut(&module).unwrap().add_symbol(index, &symbol);
+        let index = self.obj_count();
+        self.module_mut(&module).unwrap().add_symbol(index, &symbol);
     }
 
     pub fn gen_symbol_unique(&mut self) -> String {
-        let symbol = format!("{}{}{}{}{}", "__", GEN_SYM, "-", self.curr_id, "__");
-        self.curr_id += 1;
-
-        symbol
+        self.gen_sym_id += 1;
+        format!("{}{}{}{}{}", "__", GEN_SYM, "-", self.gen_sym_id - 1, "__")
     }
 
-    /// Statistics
+    /// Stats and Data
     
-    pub fn obj_index(&self) -> usize {
+    pub fn obj_count(&self) -> usize {
         self.symbols.len() - 1
     }
 
-    pub fn has_mod<T: Into<String>>(&self, symbol: T) -> bool {
-        let symbol = symbol.into();
-        for module in self.modules.iter() {
-            if *module.name() == symbol {
-                return true;
-            }
-        }
-        false
+    pub fn has_mod<T: Into<String>>(&self, name: T) -> bool {
+        self.modules.contains_key(&name.into())
     }
 
     fn is_allowed_symbol(symbol: &String) -> bool {   
-        if let Some(_) = symbol.find(GEN_SYM)  {
-            return false;
-        }
-        true
+        symbol.find(GEN_SYM).is_none()
     }
 
     /// Getters
 
-    pub fn get_mod_at(&self, index: usize) -> &Mod {
-        &self.modules[index]
+    pub fn module_mut<T: Into<String>>(&mut self, name: T) -> Option<&mut Mod> {
+        self.modules.get_mut(&name.into())
     }
 
-    pub fn get_mod_at_mut(&mut self, index: usize) -> &mut Mod {
-        &mut self.modules[index]
+    pub fn module<T: Into<String>>(&self, name: T) -> Option<&Mod> {
+        self.modules.get(&name.into())
     }
 
-    pub fn get_mod_mut<T: Into<String>>(&mut self, symbol: T) -> Option<&mut Mod> {
-        let symbol = symbol.into();
-        for module in self.modules.iter_mut() {
-            if *module.name() == symbol {
-                return Some(module);
-            }
-        }
-        None
-    }
-
-    pub fn get_obj_at(&self, index: usize) -> &Obj {
+    pub fn obj_at(&self, index: usize) -> &Obj {
         &self.symbols[index]
     }
     
-    pub fn get_obj_at_mut(&mut self, index: usize) -> &mut Obj {
+    pub fn obj_at_mut(&mut self, index: usize) -> &mut Obj {
         &mut self.symbols[index]
     }
 
-    pub fn get_obj_mut<T: Into<String>>(&mut self, symbol: T) -> Option<&mut Obj> {
+    pub fn obj_mut<T: Into<String>>(&mut self, symbol: T) -> Option<&mut Obj> {
         let symbol = symbol.into();
-        for module in self.modules.iter() {
+
+        for module in self.modules.values() {
             if let Some(index) = module.symbol_index(self, &symbol) {
                 return Some(&mut self.symbols[index]);
             }

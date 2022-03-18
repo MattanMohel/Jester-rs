@@ -1,78 +1,48 @@
 use super::objects::{Obj, Node};
 
-#[derive(Clone)]
-pub enum Type {
-    // primitve types
-    U32(u32),
-    U64(u64),
-    I32(i32),
-    I64(i64),
-    F32(f32),
-    F64(f64),
-
-    // heap types
-    Str(String),
-    Ref(*mut Obj),
-    Node(Node),
-
-    Nil(),
-}
-
 pub trait TypeId {
-    fn as_variant(&self) -> Type;
-}
-
-impl TypeId for *mut Obj {
-    fn as_variant(&self) -> Type {
-        Type::Ref(*self)
-    }
-}
-
-impl TypeId for Node {
-    fn as_variant(&self) -> Type {
-        Type::Node(self.clone())
-    }
+    fn as_variant(&self) -> Obj;
 }
 
 impl TypeId for u32 {
-    fn as_variant(&self) -> Type {
-        Type::U32(*self)
+    fn as_variant(&self) -> Obj {
+        Obj::U32(*self)
     }
 }
 impl TypeId for u64 {
-    fn as_variant(&self) -> Type {
-        Type::U64(*self)
+    fn as_variant(&self) -> Obj {
+        Obj::U64(*self)
     }
 }
 impl TypeId for i32 {
-    fn as_variant(&self) -> Type {
-        Type::I32(*self)
+    fn as_variant(&self) -> Obj {
+        Obj::I32(*self)
     }
 }
 impl TypeId for i64 {
-    fn as_variant(&self) -> Type {
-        Type::I64(*self)
+    fn as_variant(&self) -> Obj {
+        Obj::I64(*self)
     }
 }
 impl TypeId for f32 {
-    fn as_variant(&self) -> Type {
-        Type::F32(*self)
+    fn as_variant(&self) -> Obj {
+        Obj::F32(*self)
     }
 }
 impl TypeId for f64 {
-    fn as_variant(&self) -> Type {
-        Type::F64(*self)
+    fn as_variant(&self) -> Obj {
+        Obj::F64(*self)
     }
 }
 
 impl TypeId for String {
-    fn as_variant(&self) -> Type {
-        Type::Str(self.clone())
+    fn as_variant(&self) -> Obj {
+        Obj::Str(self.clone())
     }
 }
 
 impl TypeId for () {
-    fn as_variant(&self) -> Type {
-        Type::Nil()
+    fn as_variant(&self) -> Obj {
+        Obj::Nil()
     }
 }

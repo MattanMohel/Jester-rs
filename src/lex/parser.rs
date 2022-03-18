@@ -2,9 +2,8 @@
 use crate::core::env::Env;
 use crate::core::objects::{Obj, Node};
 use crate::core::modules::Mod;
-use crate::core::types::Type;
 
-use super::lexer::to_type;
+use super::lexer::to_obj;
 use super::tokens::{Tok, Spec};
 
 /*
@@ -35,31 +34,39 @@ this form can be easily traversed and evaluated
 
 */
 
-pub fn parse_toks(env: &mut Env, module: &mut Mod, toks: &[Tok]) -> Node {
+pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize) {
     let mut node = Vec::new();
+    let mut skip: usize = 0;
 
     for (i, tok) in toks.iter().enumerate() {
-        match tok.spec {
-            
+        if skip > 0 {
+            continue;
+        }
+
+        match tok.spec {        
             Spec::Beg => {
-                let gen = env.gen_symbol_unique();
-                let new = parse_toks(env, module, &toks[i..]);
-                env.add_symbol(&gen, Obj::new(Type::Node(new)));     
+                let symbol = env.gen_symbol_unique();
+                let (vec, skipped) = parse_toks(env, module, &toks[i..]);
+
+                env.add_symbol(symbol, Obj::Node(vec));     
+                skip = skipped;
                 
-                node.push(env.obj_index());
+                node.push(env.obj_count());
             },
 
-            Spec::End => break,
+            Spec::End => {
+                return (node, i);
+            },
 
             Spec::Symbol => {
-                if !module.has_symbol(env, &tok.symbol) {
-                    env.add_symbol_to(module.name(), &tok.symbol, Obj::new(to_type(&tok.symbol)));
+                if !env.module(module).unwrap().has_symbol(env, &tok.symbol) {
+                    env.add_symbol_to(module, &tok.symbol, to_obj(&tok.symbol));
                 }
             }
         }
     }
 
-    node
+    panic!("unbalanced parenthesis!")
 }
 
 /*

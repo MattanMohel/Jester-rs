@@ -2,7 +2,7 @@
 use std::fs;
 
 use super::tokens::{Tok, Spec};
-use crate::core::types::Type;
+use crate::core::objects::Obj;
 
 const ESCAPERS:  [char; 6] = [' ', ';', '\n', '\t', '\0', '\"'];
 const OPERATORS: [char; 4] = ['(', ')', '\'', '~']; 
@@ -31,16 +31,16 @@ fn is_non_tok(ch: char) -> bool {
     is_escaper(ch) || is_operater(ch)
 }
 
-pub fn to_type(src: &String) -> Type {    
+pub fn to_obj(src: &String) -> Obj {    
     if let Ok(is_i32) = src.parse::<i32>() {
-        return Type::I32(is_i32)
+        return Obj::I32(is_i32)
     }
     
     if let Ok(is_f32) = src.parse::<f32>() {
-        return Type::F32(is_f32)
+        return Obj::F32(is_f32)
     }
 
-    Type::Nil()
+    Obj::Nil()
 }
 
 pub fn to_tok(src: &String, line: usize) -> Option<Tok>{
