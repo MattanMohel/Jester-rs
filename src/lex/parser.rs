@@ -36,32 +36,39 @@ this form can be easily traversed and evaluated
 
 pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize) {
     let mut node = Vec::new();
+    let mut is_rec_end = false;
     let mut skip: usize = 0;
 
     for (i, tok) in toks.iter().enumerate() {
         if skip > 0 {
+            skip -= 1;
             continue;
         }
 
         match tok.spec {        
             Spec::Beg => {
                 let symbol = env.gen_symbol_unique();
-                let (vec, skipped) = parse_toks(env, module, &toks[i..]);
+                let (vec, skipped) = parse_toks(env, module, &toks[i + 1..]);
 
-                env.add_symbol(symbol, Obj::Node(vec));     
+                env.add_gen_symbol_to(module, &symbol, Obj::Node(vec));     
                 skip = skipped;
                 
                 node.push(env.obj_count());
+                is_rec_end = true;
             },
 
             Spec::End => {
-                return (node, i);
+                if !is_rec_end || toks.get(i + 1).is_none() {
+                    return (node, i);
+                }
             },
 
             Spec::Symbol => {
                 if !env.module(module).unwrap().has_symbol(env, &tok.symbol) {
                     env.add_symbol_to(module, &tok.symbol, to_obj(&tok.symbol));
                 }
+
+                node.push(env.module(module).unwrap().symbol_index(env, &tok.symbol).unwrap());
             }
         }
     }

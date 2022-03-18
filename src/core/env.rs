@@ -1,10 +1,14 @@
 
 use maplit::hashmap;
 
+use crate::lex::lexer::to_toks;
+use crate::lex::parser::parse_toks;
+
 use super::objects::{Obj, ObjData};
 use super::modules::Mod;
 
 use std::collections::HashMap;
+use std::fs;
 
 const GEN_SYM: &str = "$gensym";
 const PRELUDE: &str = "prelude";
@@ -30,11 +34,9 @@ impl Env {
             gen_sym_id: 0
         }
     }
-    
-    pub fn add_symbol<T: Into<String>>(&mut self, symbol: T, obj: Obj) {
-        let symbol = symbol.into();
 
-        assert!(Env::is_allowed_symbol(&symbol));
+    fn add_symbol_impl(&mut self, module: String, symbol: String, is_gen_sym: bool, obj: Obj) {
+        assert!( !is_gen_sym && Env::is_allowed_symbol(&symbol) );
 
         self.symbol_data.push( 
             ObjData {
@@ -47,30 +49,40 @@ impl Env {
 
         self.symbols.push(obj);
 
+        assert!(self.has_module(&module));
+
         let index = self.obj_count();
-        self.module_mut(PRELUDE).unwrap().add_symbol(index, &symbol);
+        self.module_mut(&module).unwrap().add_symbol(index, &symbol);
+    }
+    
+    pub fn add_symbol<T: Into<String>>(&mut self, symbol: T, obj: Obj) {
+        self.add_symbol_impl(PRELUDE.to_string(), symbol.into(), false, obj);
     }
 
     pub fn add_symbol_to<T: Into<String>>(&mut self, module: T, symbol: T, obj: Obj) {
-        let module = module.into();
-        let symbol = symbol.into();
+        self.add_symbol_impl(module.into(), symbol.into(), false, obj);
+    }
 
-        assert!(Env::is_allowed_symbol(&symbol));
+    pub fn add_gen_symbol_to<T: Into<String>>(&mut self, module: T, symbol: T, obj: Obj) {
+        self.add_symbol_impl(module.into(), symbol.into(), true, obj);
+    }
 
-        self.symbol_data.push( 
-            ObjData {
-                is_pub:    true,
-                is_const:  false,
-                module:    0,
-                ref_count: 0
-            }
-        );
+    pub fn new_module<T: Into<String>>(&mut self, name: T) {
+        let name = name.into();
+        assert!( !self.has_module(&name) );
 
-        self.symbols.push(obj);
+        let (k, v) = Mod::new_key(&name);
+        self.modules.insert(k, v);
+    }
 
-        assert!(self.has_mod(&module));
-        let index = self.obj_count();
-        self.module_mut(&module).unwrap().add_symbol(index, &symbol);
+    pub fn new_module_from_file<T: Into<String>>(&mut self, name: T, path: T) {
+        let name = name.into();
+        assert!( !self.has_module(&name) );
+
+        let (k, v) = Mod::new_key(&name);
+        self.modules.insert(k.clone(), v);
+
+        parse_toks(self, &k, &to_toks(&fs::read_to_string(path.into()).unwrap()));
     }
 
     pub fn gen_symbol_unique(&mut self) -> String {
@@ -84,7 +96,7 @@ impl Env {
         self.symbols.len() - 1
     }
 
-    pub fn has_mod<T: Into<String>>(&self, name: T) -> bool {
+    pub fn has_module<T: Into<String>>(&self, name: T) -> bool {
         self.modules.contains_key(&name.into())
     }
 

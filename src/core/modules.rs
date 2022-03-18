@@ -9,13 +9,20 @@ pub struct Mod {
 }
 
 impl Mod {
-    // creates a new module where the first 
-    // of its imported 'modules' is itself
     pub fn new(name: &String) -> Self {
         Self {
             symbols: HashMap::new(),
             modules: vec![name.clone()],
         }
+    }
+
+    pub fn new_key(name: &String) -> (String, Self) {
+        let s = Self {
+            symbols: HashMap::new(),
+            modules: vec![name.clone()],
+        };
+
+        (name.clone(), s)
     }
 
     pub fn add_symbol(&mut self, index: usize, symbol: &String) {
@@ -25,12 +32,12 @@ impl Mod {
     pub fn has_symbol(&self, env: &Env, symbol: &String) -> bool {
         self.modules
             .iter()
-            .any(|name| { env.module(name).unwrap().has_symbol(env, symbol) })
+            .any(|name| { env.module(name).unwrap().symbols.contains_key(symbol) })
     }
 
     pub fn symbol_index(&self, env: &Env, symbol: &String) -> Option<usize> {
         self.modules
             .iter()
-            .find_map(|name| { env.module(name).unwrap().symbol_index(env, &symbol) })
+            .find_map(|name| { env.module(name).unwrap().symbols.get(symbol).map(|i| *i ) })
     }
 }
