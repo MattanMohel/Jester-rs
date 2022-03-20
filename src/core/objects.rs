@@ -1,14 +1,16 @@
 
-use super::types::{TypeId};
-use super::objects::Obj::*;
+use super:: {
+    env::Env,
+    types::TypeId,
+    objects::Obj::*, 
+    functions::{FnNative, FnBridge}
+};
 
-use std::fmt;
-
-pub type Node = Vec<usize>;
+use std::{fmt, rc::Weak};
 
 #[derive(Clone)]
 pub enum Obj {
-    // primitve types
+    // primitves
     U32(u32),
     U64(u64),
     I32(i32),
@@ -16,11 +18,16 @@ pub enum Obj {
     F32(f32),
     F64(f64),
 
-    // heap types
+    // heaps
     Str(String),
 
-    Node(Node),
-    Ref(*mut Obj),
+    // functions
+    FnRust(),
+    FnNative(FnNative),
+    FnBridge(FnBridge),
+
+    Args(Node),
+    Ref(usize),
 
     Nil(),
 }
@@ -32,7 +39,7 @@ impl fmt::Display for Obj {
 }
 
 impl Obj {
-    pub fn new_const<T: TypeId>(val: T) -> Obj {
+    pub fn new_const<'a, T: TypeId>(val: T) -> Obj {
         val.as_variant()
     }
 
@@ -180,9 +187,57 @@ impl Obj {
     }
 }
 
+#[derive(Clone)]
+pub struct Node {
+    pub args: Vec<usize>,
+}
+
+pub struct NodeIter<'a, 'b> {
+    pub args: &'a Vec<usize>,
+    env:  &'b Env,
+
+    index: usize
+} 
+
+impl<'a, 'b> std::ops::Index<usize> for NodeIter<'a, 'b> {
+    type Output = Obj;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.env.obj_at(self.args[self.index - 1]).unwrap()
+    }
+}
+
+impl<'a, 'b> Iterator for NodeIter<'a, 'b> {
+    type Item = &'b Obj;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.index += 1;
+        self.env.obj_at(self.args[self.index - 1])
+    }
+}
+
+impl Node {
+    pub fn new() -> Self {
+        Self {
+            args: Vec::new(),
+        }
+    }
+
+    pub fn iter<'a, 'b>(&'a self, env: &'b Env) -> NodeIter<'a, 'b> {
+        NodeIter {
+            args: &self.args,
+            env:  env,
+            index: 0,
+        }
+    }
+
+    pub fn get<'a>(&self, env: &'a Env, i: usize) -> Option<&'a Obj> {
+        env.obj_at(self.args[i])
+    }
+}
+
 pub struct ObjData {
     pub is_pub:    bool,
     pub is_const:  bool,
-    pub module:    usize,
     pub ref_count: usize,
 }

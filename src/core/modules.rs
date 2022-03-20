@@ -32,12 +32,19 @@ impl Mod {
     pub fn has_symbol(&self, env: &Env, symbol: &String) -> bool {
         self.modules
             .iter()
-            .any(|name| { env.module(name).unwrap().symbols.contains_key(symbol) })
+            .any(|name| { env.module(name)
+                .unwrap().symbols
+                .contains_key(symbol) 
+            })
     }
 
     pub fn symbol_index(&self, env: &Env, symbol: &String) -> Option<usize> {
         self.modules
             .iter()
-            .find_map(|name| { env.module(name).unwrap().symbols.get(symbol).map(|i| *i ) })
+            .find_map(|name| { env.module(name)
+                .unwrap().symbols
+                .get(symbol)
+                .map(|i| *i ) 
+            })
     }
 }

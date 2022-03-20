@@ -35,7 +35,7 @@ this form can be easily traversed and evaluated
 */
 
 pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize) {
-    let mut node = Vec::new();
+    let mut node = Node::new();
     let mut is_rec_end = false;
     let mut skip: usize = 0;
 
@@ -50,10 +50,10 @@ pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize)
                 let symbol = env.gen_symbol_unique();
                 let (vec, skipped) = parse_toks(env, module, &toks[i + 1..]);
 
-                env.add_gen_symbol_to(module, &symbol, Obj::Node(vec));     
+                env.add_symbol_to(module, &symbol, Obj::Args(vec));     
                 skip = skipped;
                 
-                node.push(env.obj_count());
+                node.args.push(env.obj_count() - 1);
                 is_rec_end = true;
             },
 
@@ -68,7 +68,11 @@ pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize)
                     env.add_symbol_to(module, &tok.symbol, to_obj(&tok.symbol));
                 }
 
-                node.push(env.module(module).unwrap().symbol_index(env, &tok.symbol).unwrap());
+                node.args.push(
+                    env.module(module)
+                        .unwrap()
+                        .symbol_index(env, &tok.symbol)
+                        .unwrap());
             }
         }
     }

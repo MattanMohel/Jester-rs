@@ -10,9 +10,8 @@ use super::modules::Mod;
 use std::collections::HashMap;
 use std::fs;
 
-const GEN_SYM: &str = "$gensym";
+const GEN_SYM: &str = "gensym";
 const PRELUDE: &str = "prelude";
-
 
 pub struct Env {
     symbol_data: Vec<ObjData>,
@@ -35,36 +34,48 @@ impl Env {
         }
     }
 
-    fn add_symbol_impl(&mut self, module: String, symbol: String, is_gen_sym: bool, obj: Obj) {
-        assert!( !is_gen_sym && Env::is_allowed_symbol(&symbol) );
+    pub fn add_symbol<T: Into<String>>(&mut self, symbol: T, obj: Obj) {
+        let symbol = symbol.into();
+
+        assert!(self.symbol_type(&symbol));
 
         self.symbol_data.push( 
             ObjData {
-                is_pub:    true,
-                is_const:  false,
-                module:    0,
+                is_pub:   true,
+                is_const: false,
                 ref_count: 0
             }
         );
 
         self.symbols.push(obj);
 
-        assert!(self.has_module(&module));
-
-        let index = self.obj_count();
-        self.module_mut(&module).unwrap().add_symbol(index, &symbol);
-    }
-    
-    pub fn add_symbol<T: Into<String>>(&mut self, symbol: T, obj: Obj) {
-        self.add_symbol_impl(PRELUDE.to_string(), symbol.into(), false, obj);
+        let index = self.obj_count() - 1;
+        self.module_mut(&PRELUDE.to_string())
+            .unwrap()
+            .add_symbol(index, &symbol);
     }
 
     pub fn add_symbol_to<T: Into<String>>(&mut self, module: T, symbol: T, obj: Obj) {
-        self.add_symbol_impl(module.into(), symbol.into(), false, obj);
-    }
+        let module = module.into();
+        let symbol = symbol.into();
 
-    pub fn add_gen_symbol_to<T: Into<String>>(&mut self, module: T, symbol: T, obj: Obj) {
-        self.add_symbol_impl(module.into(), symbol.into(), true, obj);
+        assert!(self.symbol_type(&symbol));
+        assert!(self.has_module(&module));
+
+        self.symbol_data.push( 
+            ObjData {
+                is_pub:   true,
+                is_const: false,
+                ref_count: 0
+            }
+        );
+
+        self.symbols.push(obj);
+
+        let index = self.obj_count() - 1;
+        self.module_mut(&module)
+            .unwrap()
+            .add_symbol(index, &symbol);    
     }
 
     pub fn new_module<T: Into<String>>(&mut self, name: T) {
@@ -93,15 +104,24 @@ impl Env {
     /// Stats and Data
     
     pub fn obj_count(&self) -> usize {
-        self.symbols.len() - 1
+        self.symbols.len()
     }
 
     pub fn has_module<T: Into<String>>(&self, name: T) -> bool {
         self.modules.contains_key(&name.into())
     }
 
-    fn is_allowed_symbol(symbol: &String) -> bool {   
-        symbol.find(GEN_SYM).is_none()
+    fn symbol_type(&mut self, symbol: &String) -> bool {
+        let beg = &symbol[0..2] == "__";
+        let end = &symbol[symbol.len() - 2..] == "__";
+        let mid = symbol[2..symbol.len() - 2].parse::<usize>();
+
+        if beg && end && matches!(mid, Ok(n) if n == self.gen_sym_id) {
+            self.gen_sym_id += 1;
+            true
+        } else {
+            false
+        }
     }
 
     /// Getters
@@ -114,12 +134,12 @@ impl Env {
         self.modules.get(&name.into())
     }
 
-    pub fn obj_at(&self, index: usize) -> &Obj {
-        &self.symbols[index]
+    pub fn obj_at(&self, index: usize) -> Option<&Obj> {
+        self.symbols.get(index)
     }
     
-    pub fn obj_at_mut(&mut self, index: usize) -> &mut Obj {
-        &mut self.symbols[index]
+    pub fn obj_at_mut(&mut self, index: usize) -> Option<&mut Obj> {
+        self.symbols.get_mut(index)
     }
 
     pub fn obj_mut<T: Into<String>>(&mut self, symbol: T) -> Option<&mut Obj> {

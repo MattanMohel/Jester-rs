@@ -56,7 +56,13 @@ pub fn to_tok(src: &String, line: usize) -> Option<Tok>{
         Spec::Symbol
     };
 
-    Some(Tok::new(src, spec, line))
+    Some(
+        Tok {
+            symbol: src.clone(),
+            spec: spec,
+            line: line 
+        }
+    )
 }
 
 pub fn to_toks(src: &String) -> Vec<Tok> {
