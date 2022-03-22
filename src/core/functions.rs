@@ -1,17 +1,17 @@
 use super::{
     env::Env, 
-    objects::{Node, NodeIter, Obj}
+    objects::{Node, Obj}
 };
 
 #[derive(Clone)]
 pub struct FnBridge {
-    native: fn(&Env, &NodeIter) -> Obj,
+    native: fn(&Env, &Node) -> Obj,
     name: String
 }
 
 impl FnBridge {
     #[inline]
-    pub fn invoke(&self, env: &Env, args: &NodeIter) -> Obj {
+    pub fn invoke(&self, env: &Env, args: &Node) -> Obj {
         (self.native)(env, args)
     }
 }
@@ -25,7 +25,7 @@ pub struct FnNative {
 
 impl FnNative {
     #[inline]
-    pub fn invoke(&self, env: &Env, args: &NodeIter) -> Obj {
+    pub fn invoke(&self, env: &Env, args: &Node) -> Obj {
         // apply args...
         // exec body... 
         todo!()

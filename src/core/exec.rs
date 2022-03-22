@@ -1,8 +1,7 @@
-use super::{env::Env, objects::{Obj, Node, NodeIter}};
+use super::{env::Env, objects::{Obj, Node}};
 
 pub fn eval_obj(env: &Env, obj: &Obj) -> Obj {
     match obj {
-
         Obj::Args(args) => {
             let node = args.iter(env);
 

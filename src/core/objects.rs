@@ -1,12 +1,15 @@
 
 use super:: {
-    env::Env,
     types::TypeId,
     objects::Obj::*, 
-    functions::{FnNative, FnBridge}
+    functions::{FnNative, FnBridge}, env::Env
 };
 
-use std::{fmt, rc::Weak};
+use std::{
+    fmt, 
+    rc::Rc, 
+    cell::{Ref, RefCell}, borrow::Borrow, ops::Deref
+};
 
 #[derive(Clone)]
 pub enum Obj {
@@ -189,50 +192,21 @@ impl Obj {
 
 #[derive(Clone)]
 pub struct Node {
-    pub args: Vec<usize>,
+    pub args: Vec<Rc<RefCell<Obj>>>,
 }
 
-pub struct NodeIter<'a, 'b> {
-    pub args: &'a Vec<usize>,
-    env:  &'b Env,
-
-    index: usize
-} 
-
-impl<'a, 'b> std::ops::Index<usize> for NodeIter<'a, 'b> {
-    type Output = Obj;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        self.env.obj_at(self.args[self.index - 1]).unwrap()
-    }
+pub struct NodeIter<'a> {
+    pub args: &'a Vec<Rc<RefCell<Obj>>>,
+    index: usize,
 }
 
-impl<'a, 'b> Iterator for NodeIter<'a, 'b> {
-    type Item = &'b Obj;
+impl<'a> Iterator for NodeIter<'a> {
+    type Item = Ref<'a, Obj>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.index += 1;
-        self.env.obj_at(self.args[self.index - 1])
-    }
-}
-
-impl Node {
-    pub fn new() -> Self {
-        Self {
-            args: Vec::new(),
-        }
-    }
-
-    pub fn iter<'a, 'b>(&'a self, env: &'b Env) -> NodeIter<'a, 'b> {
-        NodeIter {
-            args: &self.args,
-            env:  env,
-            index: 0,
-        }
-    }
-
-    pub fn get<'a>(&self, env: &'a Env, i: usize) -> Option<&'a Obj> {
-        env.obj_at(self.args[i])
+        self.args.get(self.index).map(|cell| {
+            cell.deref().borrow()
+        })
     }
 }
 

@@ -7,15 +7,25 @@ use crate::lex::parser::parse_toks;
 use super::objects::{Obj, ObjData};
 use super::modules::Mod;
 
-use std::collections::HashMap;
-use std::fs;
+use std::cell::RefMut;
+use std::ops::Deref;
+use std::{
+    collections::HashMap,
+    fs,
+
+    rc::Rc,
+    
+    cell::{Ref, RefCell}
+};
 
 const GEN_SYM: &str = "gensym";
 const PRELUDE: &str = "prelude";
 
+type ObjRef = Rc<RefCell<Obj>>;
+
 pub struct Env {
     symbol_data: Vec<ObjData>,
-    symbols:     Vec<Obj>,
+    symbols:     Vec<Rc<RefCell<Obj>>>,
 
     modules:     HashMap<String, Mod>,
 
@@ -47,7 +57,7 @@ impl Env {
             }
         );
 
-        self.symbols.push(obj);
+        self.symbols.push(Rc::new(RefCell::new(obj)));
 
         let index = self.obj_count() - 1;
         self.module_mut(&PRELUDE.to_string())
@@ -70,7 +80,7 @@ impl Env {
             }
         );
 
-        self.symbols.push(obj);
+        self.symbols.push(Rc::new(RefCell::new(obj)));
 
         let index = self.obj_count() - 1;
         self.module_mut(&module)
@@ -134,20 +144,24 @@ impl Env {
         self.modules.get(&name.into())
     }
 
-    pub fn obj_at(&self, index: usize) -> Option<&Obj> {
-        self.symbols.get(index)
-    }
-    
-    pub fn obj_at_mut(&mut self, index: usize) -> Option<&mut Obj> {
-        self.symbols.get_mut(index)
+    pub fn obj_at(&self, index: usize) -> Option<Ref<'_, Obj>> {
+        self.symbols.get(index).map(|cell| {
+            cell.deref().borrow()
+        })
     }
 
-    pub fn obj_mut<T: Into<String>>(&mut self, symbol: T) -> Option<&mut Obj> {
+    pub fn obj_at_mut(&mut self, index: usize) -> Option<RefMut<'_, Obj>> {
+        self.symbols.get(index).map(|cell| {
+            cell.deref().borrow_mut()
+        })  
+    }
+
+    pub fn obj_mut<T: Into<String>>(&mut self, symbol: T) -> Option<RefMut<'_, Obj>> {
         let symbol = symbol.into();
 
         for module in self.modules.values() {
             if let Some(index) = module.symbol_index(self, &symbol) {
-                return Some(&mut self.symbols[index]);
+                return Some(self.symbols[index].deref().borrow_mut());
             }
         }
         None 
