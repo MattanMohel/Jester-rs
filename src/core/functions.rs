@@ -1,6 +1,7 @@
 use super::{
     env::Env, 
-    objects::{Node, Obj}
+    objects::Obj,
+    nodes::Node
 };
 
 #[derive(Clone)]

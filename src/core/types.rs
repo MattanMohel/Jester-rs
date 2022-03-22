@@ -1,4 +1,4 @@
-use super::objects::{Obj, Node};
+use super::objects::Obj;
 
 pub trait TypeId {
     fn as_variant(&self) -> Obj;

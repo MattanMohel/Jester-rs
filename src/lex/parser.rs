@@ -1,7 +1,7 @@
 
 use crate::core::env::Env;
-use crate::core::objects::{Obj, Node};
-use crate::core::modules::Mod;
+use crate::core::objects::Obj;
+use crate::core::nodes::Node;
 
 use super::lexer::to_obj;
 use super::tokens::{Tok, Spec};
@@ -35,7 +35,7 @@ this form can be easily traversed and evaluated
 */
 
 pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize) {
-    let mut node = Node::new();
+    let mut node = Node(Vec::new());
     let mut is_rec_end = false;
     let mut skip: usize = 0;
 
@@ -53,7 +53,7 @@ pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize)
                 env.add_symbol_to(module, &symbol, Obj::Args(vec));     
                 skip = skipped;
                 
-                node.args.push(env.obj_count() - 1);
+                node.0.push(env.shared_obj(&symbol).unwrap());
                 is_rec_end = true;
             },
 
@@ -68,11 +68,8 @@ pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize)
                     env.add_symbol_to(module, &tok.symbol, to_obj(&tok.symbol));
                 }
 
-                node.args.push(
-                    env.module(module)
-                        .unwrap()
-                        .symbol_index(env, &tok.symbol)
-                        .unwrap());
+                node.0.push(
+                    env.shared_obj(&tok.symbol).unwrap());
             }
         }
     }

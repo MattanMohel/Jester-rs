@@ -1,15 +1,11 @@
 
 use super:: {
+    nodes::Node,
     types::TypeId,
-    objects::Obj::*, 
-    functions::{FnNative, FnBridge}, env::Env
+    functions::{FnBridge, FnNative}, 
 };
 
-use std::{
-    fmt, 
-    rc::Rc, 
-    cell::{Ref, RefCell}, borrow::Borrow, ops::Deref
-};
+use std::fmt;
 
 #[derive(Clone)]
 pub enum Obj {
@@ -41,7 +37,10 @@ impl fmt::Display for Obj {
     }
 }
 
+use super::objects::Obj::*;
+
 impl Obj {
+
     pub fn new_const<'a, T: TypeId>(val: T) -> Obj {
         val.as_variant()
     }
@@ -187,26 +186,6 @@ impl Obj {
             F64(x) => x as f64,
             _ => f64::default(),
         }
-    }
-}
-
-#[derive(Clone)]
-pub struct Node {
-    pub args: Vec<Rc<RefCell<Obj>>>,
-}
-
-pub struct NodeIter<'a> {
-    pub args: &'a Vec<Rc<RefCell<Obj>>>,
-    index: usize,
-}
-
-impl<'a> Iterator for NodeIter<'a> {
-    type Item = Ref<'a, Obj>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.args.get(self.index).map(|cell| {
-            cell.deref().borrow()
-        })
     }
 }
 

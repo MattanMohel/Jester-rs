@@ -15,80 +15,66 @@ use std::{
 
     rc::Rc,
     
-    cell::{Ref, RefCell}
+    cell::RefCell
 };
 
 const GEN_SYM: &str = "gensym";
 const PRELUDE: &str = "prelude";
 
-type ObjRef = Rc<RefCell<Obj>>;
+pub struct ObjIn(pub RefCell<Obj>, pub RefCell<ObjData>);
 
 pub struct Env {
-    symbol_data: Vec<ObjData>,
-    symbols:     Vec<Rc<RefCell<Obj>>>,
+    symbols: Vec<Rc<ObjIn>>,
+    modules: HashMap<String, Mod>,
 
-    modules:     HashMap<String, Mod>,
-
-    gen_sym_id: usize,
+    gen_id: usize,
 }
 
 impl Env {
     pub fn new() -> Self {
         Self {
-            symbol_data: Vec::new(),
-            symbols:     Vec::new(),
+            symbols: Vec::new(),
             modules: hashmap! { 
                 String::from(PRELUDE) => Mod::new(&String::from(PRELUDE)) 
             },
-            gen_sym_id: 0
+            gen_id: 0,
         }
     }
-
-    pub fn add_symbol<T: Into<String>>(&mut self, symbol: T, obj: Obj) {
-        let symbol = symbol.into();
-
-        assert!(self.symbol_type(&symbol));
-
-        self.symbol_data.push( 
-            ObjData {
-                is_pub:   true,
-                is_const: false,
-                ref_count: 0
-            }
-        );
-
-        self.symbols.push(Rc::new(RefCell::new(obj)));
-
-        let index = self.obj_count() - 1;
-        self.module_mut(&PRELUDE.to_string())
-            .unwrap()
-            .add_symbol(index, &symbol);
-    }
-
-    pub fn add_symbol_to<T: Into<String>>(&mut self, module: T, symbol: T, obj: Obj) {
+    
+    pub fn add_symbol_to<T, U>(&mut self, module: T, symbol: U, obj: Obj) 
+    where T: Into<String>, U: Into<String> {   
         let module = module.into();
         let symbol = symbol.into();
 
         assert!(self.symbol_type(&symbol));
-        assert!(self.has_module(&module));
+        assert! (self.has_module(&module));
 
-        self.symbol_data.push( 
-            ObjData {
-                is_pub:   true,
-                is_const: false,
-                ref_count: 0
-            }
-        );
+        self.symbols.push(Rc::new(
+            ObjIn (
+                RefCell::new(obj),           
+                RefCell::new(ObjData {
+                    is_pub:   true,
+                    is_const: false,
+                    ref_count: 0
+                }
+            ))
+        ));
 
-        self.symbols.push(Rc::new(RefCell::new(obj)));
+        let index = self.symbols.len() - 1;
 
-        let index = self.obj_count() - 1;
         self.module_mut(&module)
             .unwrap()
             .add_symbol(index, &symbol);    
     }
 
-    pub fn new_module<T: Into<String>>(&mut self, name: T) {
+    pub fn add_symbol<T>(&mut self, symbol: T, obj: Obj) 
+    where T: Into<String> {
+        self.add_symbol_to(PRELUDE, symbol, obj)
+    }
+
+
+    pub fn new_module<T>(&mut self, name: T) 
+    where T: Into<String> {
         let name = name.into();
         assert!( !self.has_module(&name) );
 
@@ -96,7 +82,8 @@ impl Env {
         self.modules.insert(k, v);
     }
 
-    pub fn new_module_from_file<T: Into<String>>(&mut self, name: T, path: T) {
+    pub fn new_module_from_file<T>(&mut self, name: T, path: T) 
+    where T: Into<String> {
         let name = name.into();
         assert!( !self.has_module(&name) );
 
@@ -107,15 +94,11 @@ impl Env {
     }
 
     pub fn gen_symbol_unique(&mut self) -> String {
-        self.gen_sym_id += 1;
-        format!("{}{}{}{}{}", "__", GEN_SYM, "-", self.gen_sym_id - 1, "__")
+        self.gen_id += 1;
+        format!("{}{}{}{}{}", "__", GEN_SYM, "-", self.gen_id - 1, "__")
     }
 
     /// Stats and Data
-    
-    pub fn obj_count(&self) -> usize {
-        self.symbols.len()
-    }
 
     pub fn has_module<T: Into<String>>(&self, name: T) -> bool {
         self.modules.contains_key(&name.into())
@@ -126,8 +109,8 @@ impl Env {
         let end = &symbol[symbol.len() - 2..] == "__";
         let mid = symbol[2..symbol.len() - 2].parse::<usize>();
 
-        if beg && end && matches!(mid, Ok(n) if n == self.gen_sym_id) {
-            self.gen_sym_id += 1;
+        if beg && end && matches!(mid, Ok(n) if n == self.gen_id) {
+            self.gen_id += 1;
             true
         } else {
             false
@@ -136,32 +119,35 @@ impl Env {
 
     /// Getters
 
-    pub fn module_mut<T: Into<String>>(&mut self, name: T) -> Option<&mut Mod> {
+    pub fn module_mut<T>(&mut self, name: T) -> Option<&mut Mod> 
+    where T: Into<String> {
         self.modules.get_mut(&name.into())
     }
 
-    pub fn module<T: Into<String>>(&self, name: T) -> Option<&Mod> {
+    pub fn module<T>(&self, name: T) -> Option<&Mod> 
+    where T: Into<String> {
         self.modules.get(&name.into())
     }
 
-    pub fn obj_at(&self, index: usize) -> Option<Ref<'_, Obj>> {
-        self.symbols.get(index).map(|cell| {
-            cell.deref().borrow()
-        })
-    }
-
-    pub fn obj_at_mut(&mut self, index: usize) -> Option<RefMut<'_, Obj>> {
-        self.symbols.get(index).map(|cell| {
-            cell.deref().borrow_mut()
-        })  
-    }
-
-    pub fn obj_mut<T: Into<String>>(&mut self, symbol: T) -> Option<RefMut<'_, Obj>> {
+    pub fn shared_obj<T>(&mut self, symbol: T) -> Option<Rc<ObjIn>> 
+    where T: Into<String> {
         let symbol = symbol.into();
 
         for module in self.modules.values() {
             if let Some(index) = module.symbol_index(self, &symbol) {
-                return Some(self.symbols[index].deref().borrow_mut());
+                return Some(self.symbols[index].clone());
+            }
+        }
+        None 
+    }
+
+    pub fn obj_mut<T>(&mut self, symbol: T) -> Option<RefMut<'_, Obj>> 
+    where T: Into<String> {
+        let symbol = symbol.into();
+
+        for module in self.modules.values() {
+            if let Some(index) = module.symbol_index(self, &symbol) {
+                return Some(self.symbols[index].deref().0.borrow_mut());
             }
         }
         None 
