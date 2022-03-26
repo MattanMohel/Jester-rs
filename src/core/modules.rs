@@ -1,6 +1,7 @@
 
 use super::{
     objects::Obj, 
+    env::{Env, Shared}, 
 };
 
 use std::{
@@ -10,23 +11,29 @@ use std::{
 };
 
 pub struct Mod {
-    symbols: HashMap<String, Rc<RefCell<Obj>>>,
+    symbols: HashMap<String, Shared<Obj>>,
     imports: Vec<Rc<RefCell<Mod>>>,
 }
 
 impl Mod {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             symbols: HashMap::new(),
             imports: Vec::new(),
         }
     }
 
-    pub fn add_symbol(&mut self, symbol: &String, value: &Rc<RefCell<Obj>>) {
-        self.symbols.insert(symbol.clone(), value.clone());
+    pub fn add_import(&mut self, module: &Shared<Mod>) {
+        self.imports.push(module.clone());
     }
 
-    pub fn symbol(&self, symbol: &String) -> Option<Rc<RefCell<Obj>>> {
+    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> Shared<Obj> {
+        self.symbols.insert(
+            symbol.clone(), 
+            value.clone()).unwrap()
+    }
+
+    pub fn symbol(&self, symbol: &String) -> Option<Shared<Obj>> {
         match self.symbols.get(symbol) {
             Some(symbol) => Some(symbol.clone()),
 

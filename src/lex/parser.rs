@@ -1,10 +1,13 @@
+use crate::core::{
+    env::Env,
+    objects::Obj,
+    nodes::Node, modules::Mod,
+};
 
-use crate::core::env::Env;
-use crate::core::objects::Obj;
-use crate::core::nodes::Node;
-
-use super::lexer::to_obj;
-use super::tokens::{Tok, Spec};
+use super::{
+    lexer::to_obj,
+    tokens::{Tok, Spec},
+};
 
 /*
 
@@ -34,47 +37,52 @@ this form can be easily traversed and evaluated
 
 */
 
-pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize) {
-    let mut node = Node { args: Vec::new() };
-    let mut is_rec_end = false;
-    let mut skip: usize = 0;
+pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) {
+    let mut module = env.add_module(mod_id, Mod::new()); 
 
-    for (i, tok) in toks.iter().enumerate() {
-        if skip > 0 {
-            skip -= 1;
-            continue;
-        }
+    let mut node_curr = Node::default();
+    let mut nodes_prev = Vec::new();
 
+    let mut parenthesis_depth: isize = 0;
+    
+    for tok in toks.iter() {
         match tok.spec {        
             Spec::Beg => {
-                let symbol = env.unique_symbol();
-                let (vec, skipped) = parse_toks(env, module, &toks[i + 1..]);
+                parenthesis_depth += 1;
 
-                env.add_symbol(module, &symbol, Obj::Args(vec));     
-                skip = skipped;
-                
-                node.args.push(env.symbol(&symbol).unwrap());
-                is_rec_end = true;
+                nodes_prev.push(node_curr);
+                node_curr = Node::default();
             },
 
             Spec::End => {
-                if !is_rec_end || toks.get(i + 1).is_none() {
-                    return (node, i);
+                parenthesis_depth -= 1;
+
+                match nodes_prev.pop() {
+                    Some(mut node_prev) => {
+                        let symbol = env.unique_symbol();
+                        
+                        node_prev.args.push(
+                            env.add_symbol(mod_id, &symbol, Obj::Node(node_curr)));
+
+                        node_curr = node_prev;
+                    },
+
+                    None => break,
                 }
             },
 
             Spec::Symbol => {
-                if !env.module(module).unwrap().borrow().symbol(&tok.symbol).is_some() {
-                    env.add_symbol(module, &tok.symbol, to_obj(&tok.symbol));
+                if !module.borrow().symbol(&tok.symbol).is_some() {
+                    env.add_symbol(mod_id, &tok.symbol, to_obj(&tok.symbol));
                 }
 
-                node.args.push(
-                    env.symbol(&tok.symbol).unwrap());
+                node_curr.args.push(env.symbol(&tok.symbol).unwrap());
             }
         }
     }
 
-    panic!("unbalanced parenthesis!")
+    assert!(parenthesis_depth > 0, "{} too many opening parentheses!", parenthesis_depth);
+    assert!(parenthesis_depth < 0, "{} too many closing parenthesis!", parenthesis_depth);
 }
 
 /*

@@ -29,7 +29,7 @@ pub enum Obj {
     FnNative(FnNative),
     FnBridge(FnBridge),
 
-    Args(Node),
+    Node(Node),
     Ref(usize),
 
     Nil(),
