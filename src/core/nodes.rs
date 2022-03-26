@@ -1,53 +1,50 @@
 
 use std::{
-    cell::Ref, 
+    cell::{RefCell}, 
     rc::Rc, 
     ops::Deref
 };
 
 use super::{
-    env::ObjIn,
     objects::Obj,
 };
 
 #[derive(Clone)]
-pub struct Node(pub Vec<Rc<ObjIn>>);
+pub struct Node{
+    pub args: Vec<Rc<RefCell<Obj>>>,
+}
+
+pub struct NodeIter<'a> {
+    pub args: &'a Vec<Rc<RefCell<Obj>>>,
+    pub index: usize,
+}
 
 impl<'a> IntoIterator for &'a Node {
-    type Item = Ref<'a, Obj>;
+    type Item = &'a RefCell<Obj>;
     type IntoIter = NodeIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         NodeIter {
-            args: &self.0,
-            index: 0
+            args: &self.args,
+            index: 0 
         }
     }
 }
 
-impl Node {
-    pub fn get<'a>(&'a self, i: usize) -> Ref<'a, Obj> {
-        self.0[i].deref().0.borrow()
-    }
-}
-
-pub struct NodeIter<'a> {
-    pub args: &'a Vec<Rc<ObjIn>>,
-    pub index: usize,
-}
 
 impl<'a> Iterator for NodeIter<'a> {
-    type Item = Ref<'a, Obj>;
+    type Item = &'a RefCell<Obj>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.args.get(self.index).map(|cell| {
-            cell.deref().0.borrow()
-        })
+        self.args.get(self.index)
+            .map(|obj| {
+                obj.deref()
+            })
     }
 }
 
 impl<'a> NodeIter<'a> {
-    pub fn get(&self, i: usize) -> Ref<'a, Obj> {
-        self.args[i].deref().0.borrow()
+    pub fn get(&self, i: usize) -> &'a RefCell<Obj> {
+        self.args[i].deref()
     }
 }

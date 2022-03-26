@@ -4,16 +4,23 @@ use super::{
     nodes::Node
 };
 
+pub type BridgeFn = fn(&Env, &Node) -> Obj;
+
 #[derive(Clone)]
 pub struct FnBridge {
-    native: fn(&Env, &Node) -> Obj,
-    name: String
+    bridge: BridgeFn,
 }
 
 impl FnBridge {
+    pub fn new(bridge: BridgeFn) -> Self {
+        Self {
+            bridge: bridge
+        }
+    }
+
     #[inline]
     pub fn invoke(&self, env: &Env, args: &Node) -> Obj {
-        (self.native)(env, args)
+        (self.bridge)(env, args)
     }
 }
 

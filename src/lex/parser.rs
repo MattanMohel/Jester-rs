@@ -35,7 +35,7 @@ this form can be easily traversed and evaluated
 */
 
 pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize) {
-    let mut node = Node(Vec::new());
+    let mut node = Node { args: Vec::new() };
     let mut is_rec_end = false;
     let mut skip: usize = 0;
 
@@ -47,13 +47,13 @@ pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize)
 
         match tok.spec {        
             Spec::Beg => {
-                let symbol = env.gen_symbol_unique();
+                let symbol = env.unique_symbol();
                 let (vec, skipped) = parse_toks(env, module, &toks[i + 1..]);
 
-                env.add_symbol_to(module, &symbol, Obj::Args(vec));     
+                env.add_symbol(module, &symbol, Obj::Args(vec));     
                 skip = skipped;
                 
-                node.0.push(env.shared_obj(&symbol).unwrap());
+                node.args.push(env.symbol(&symbol).unwrap());
                 is_rec_end = true;
             },
 
@@ -64,12 +64,12 @@ pub fn parse_toks(env: &mut Env, module: &String, toks: &[Tok]) -> (Node, usize)
             },
 
             Spec::Symbol => {
-                if !env.module(module).unwrap().has_symbol(env, &tok.symbol) {
-                    env.add_symbol_to(module, &tok.symbol, to_obj(&tok.symbol));
+                if !env.module(module).unwrap().borrow().symbol(&tok.symbol).is_some() {
+                    env.add_symbol(module, &tok.symbol, to_obj(&tok.symbol));
                 }
 
-                node.0.push(
-                    env.shared_obj(&tok.symbol).unwrap());
+                node.args.push(
+                    env.symbol(&tok.symbol).unwrap());
             }
         }
     }
