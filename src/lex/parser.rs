@@ -1,7 +1,12 @@
 use crate::core::{
-    env::{Env, Shared},
+    env::Env,
     objects::Obj,
-    nodes::Node, modules::Mod, err::{ParseErr, AsResult},
+    nodes::Node, 
+    err::{
+        ParseErrType::*, 
+        AsResult, 
+        ParseErr
+    },
 };
 
 use super::{
@@ -37,31 +42,31 @@ this form can be easily traversed and evaluated
 
 */
 
-pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> Result<(), ParseErr> {
+pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> ParseErr {
     env.add_module(mod_id)?; 
 
-    let mut node_curr = Node::default();
+    let mut node_curr  = Node::default();
     let mut nodes_prev = Vec::new();
-
-    let mut parenths: isize = 0;
+    let mut parenth: isize = 0;
     
     for tok in toks.iter() {
         match tok.spec {        
             Spec::Beg => {
-                parenths += 1;
+                parenth += 1;
 
                 nodes_prev.push(node_curr);
                 node_curr = Node::default();
             },
 
             Spec::End => {
-                parenths -= 1;
+                parenth -= 1;
 
                 match nodes_prev.pop() {
                     Some(mut node_prev) => {
-                        let symbol = env.unique_symbol();
+                        let symbol = env.unique_symbol();  
+                                             
                         env.add_symbol(mod_id, &symbol, Obj::Node(node_curr))?;
-                        node_prev.args.push(env.symbol(&symbol).unwrap());
+                        node_prev.args.push(env.symbol(&symbol)?);
 
                         node_curr = node_prev;
                     },
@@ -80,8 +85,8 @@ pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> Resu
         }
     }
 
-    (parenths == 0)
-        .as_result((), ParseErr::Unbalanced(parenths))
+    (parenth == 0)
+        .as_result((), Unbalanced)
 }
 
 /*

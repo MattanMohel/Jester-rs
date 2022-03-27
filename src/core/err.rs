@@ -1,8 +1,8 @@
-use super::{objects::Obj, env::Shared};
-
-use std::error::Error;
-use std::fmt::Display;
-use std::io;
+use std::{
+    error::Error,
+    fmt::Display,
+    io,
+};
 
 pub trait AsResult<U = Self> {
     // converts state of self into result
@@ -12,7 +12,7 @@ pub trait AsResult<U = Self> {
     // converts state of !self into result
     fn as_result_rev<O, E>(&self, ok: O, err: E) -> Result<O, E> 
         where E: Error;
-
+    
     // converts self into self-result value 'U'
     fn into_result<E>(self, err: E) -> Result<U, E> 
         where E: Error;
@@ -90,57 +90,46 @@ impl<T> AsResult<T> for Option<T> {
 /////Parse-Time Errors/////
 ///////////////////////////
 
+pub type ParseErr<T = ()> = Result<T, ParseErrType>;
+
 #[derive(Debug)]
-pub enum ParseErr {
-    NonSym(String),
-    DupSym(String),
-    NonMod(String),
-    DupMod(String),
+pub enum ParseErrType {
+    // symbol does not exist
+    NonSym,
+    // symbol is a duplicate
+    DupSym,
+    // symbol is disallowed
+    DisSym,
 
-    IoErr(String),
-
-    Unbalanced(isize),
+    // module does not exist
+    NonMod,
+    // module is a duplicate
+    DupMod,
+    
+    // parentheses are unbalanced
+    Unbalanced,
+    
+    // generic IO errors
+    IoErr,
 }
 
-impl Error for ParseErr {}
+impl Error for ParseErrType {}
 
-impl Display for ParseErr {
+impl Display for ParseErrType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParseErr::NonSym(s) => write!(f, "tried accessing undeclared symbol '{}'!", s),
-            ParseErr::DupSym(s) => write!(f, "module already contains symbol '{}'!", s),
-            ParseErr::NonMod(s) => write!(f, "tried accessing undeclared module '{}'!", s),
-            ParseErr::DupMod(s) => write!(f, "env already contains module '{}'!", s),
-
-            ParseErr::IoErr(s) => write!(f, "filepath '{}' doesn't exist", s),
-
-            ParseErr::Unbalanced(n) => if n.is_positive() {
-                write!(f, "too many '(' => code is unbalanced")
-            } else {
-                write!(f, "too many ')' => code is unbalanced")
-            }
-        }
+        write!(f, "Parse Error!")
     }
 }
 
-impl From<io::Error> for ParseErr {
+impl From<io::Error> for ParseErrType {
     fn from(cause: io::Error) -> Self {
-        Self::IoErr(cause.to_string())
+        Self::IoErr
     }
 }
 
 /////////////////////////////
 /////Compile-Time Errors/////
 /////////////////////////////
-
-struct EvalErr {
-    op:  Shared<Obj>,
-    opr: Shared<Obj>,
-
-    line: usize,
-
-    err_type: EvalErrType,
-}
 
 enum EvalErrType {
     MismatchedType,

@@ -1,20 +1,21 @@
-
-use crate::core::err::AsResult;
-
 use super::{
     objects::Obj, 
-    env::{Env, Shared}, err::ParseErr, 
+    env::Shared, 
+    err::{
+        ParseErrType::*, 
+        AsResult,
+        ParseErr
+    }, 
 };
 
 use std::{
     collections::HashMap, 
-    cell::RefCell, 
-    rc::Rc, 
+    ops::Deref, 
 };
 
 pub struct Mod {
     symbols: HashMap<String, Shared<Obj>>,
-    imports: Vec<Rc<RefCell<Mod>>>,
+    imports: Vec<Shared<Mod>>,
 
     id: usize,
 }
@@ -34,13 +35,19 @@ impl Mod {
         }
     }
 
-    pub fn add_import(&mut self, module: &Shared<Mod>) {
+    pub fn add_import(&mut self, module: &Shared<Mod>) -> ParseErr {
+        self.imports.iter()
+            .any(|module| { module.deref().borrow().id == module.deref().borrow().id })
+            .into_result(DupMod)?;
+
         self.imports.push(module.clone());
+        Ok(())
     }
 
-    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> Result<(), ParseErr> {
-        self.symbols.insert(symbol.clone(), value.clone())
-            .as_result_rev((), ParseErr::DupSym(symbol.clone()))
+    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> ParseErr {
+        self.symbols.contains_key(symbol).as_result_rev((), DupSym)?;
+        self.symbols.insert(symbol.clone(), value.clone());
+        Ok(())
     }
 
     pub fn symbol(&self, symbol: &String) -> Option<Shared<Obj>> {
@@ -49,7 +56,7 @@ impl Mod {
 
             None => self.imports.iter()
                 .find_map(|module| { 
-                    module.borrow().symbols.get(symbol)
+                    module.deref().borrow().symbols.get(symbol)
                         .map(|symbol| { symbol.clone() }) 
                 })  
         }

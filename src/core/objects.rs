@@ -2,14 +2,9 @@
 use super:: {
     nodes::Node,
     types::TypeId,
-    functions::{FnBridge, FnNative, BridgeFn}, 
 };
 
-use std::{
-    fmt, 
-    cell::RefCell, 
-    rc::Rc
-};
+use std::fmt;
 
 #[derive(Clone)]
 pub enum Obj {
@@ -26,8 +21,8 @@ pub enum Obj {
 
     // functions
     FnRust(),
-    FnNative(FnNative),
-    FnBridge(FnBridge),
+    FnNative(),
+    FnBridge(),
 
     Node(Node),
     Ref(usize),
@@ -45,10 +40,6 @@ impl Obj {
 
     pub fn new_const<T: TypeId>(val: T) -> Obj {
         val.as_variant()
-    }
-
-    pub fn new_bridge(bridge: BridgeFn) -> Obj {
-        Obj::FnBridge(FnBridge::new(bridge))
     }
 
     pub fn set(&mut self, other: &Obj) {
