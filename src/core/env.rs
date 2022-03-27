@@ -89,7 +89,8 @@ impl Env {
     /////////////////
 
     pub fn add_module(&mut self, mod_id: &String) -> ParseErr {
-        self.modules.insert(mod_id.clone(), Rc::new(RefCell::new(Mod::new(self.gen_mod))))   
+        self.gen_mod += 1;
+        self.modules.insert(mod_id.clone(), Rc::new(RefCell::new(Mod::new(self.gen_mod - 1))))   
             .as_result_rev((), DupMod)
     }
 
@@ -106,7 +107,6 @@ impl Env {
     }
 
     pub fn symbol(&self, symbol: &String) -> ParseErr<Shared<Obj>> {
-        println!("getting symbol {}", symbol);
         self.modules.values().find_map(|module| { module.borrow().symbol(symbol) })
             .into_result(NonSym)
     }
