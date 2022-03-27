@@ -1,7 +1,7 @@
 use crate::core::{
-    env::Env,
+    env::{Env, Shared},
     objects::Obj,
-    nodes::Node, modules::Mod,
+    nodes::Node, modules::Mod, err::{ParseErr, AsResult},
 };
 
 use super::{
@@ -37,32 +37,32 @@ this form can be easily traversed and evaluated
 
 */
 
-pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) {
-    let mut module = env.add_module(mod_id, Mod::new()); 
+pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> Result<(), ParseErr> {
+    env.add_module(mod_id)?; 
 
     let mut node_curr = Node::default();
     let mut nodes_prev = Vec::new();
 
-    let mut parenthesis_depth: isize = 0;
+    let mut parenths: isize = 0;
     
     for tok in toks.iter() {
         match tok.spec {        
             Spec::Beg => {
-                parenthesis_depth += 1;
+                parenths += 1;
 
                 nodes_prev.push(node_curr);
                 node_curr = Node::default();
             },
 
             Spec::End => {
-                parenthesis_depth -= 1;
+                parenths -= 1;
 
                 match nodes_prev.pop() {
                     Some(mut node_prev) => {
                         let symbol = env.unique_symbol();
                         
                         node_prev.args.push(
-                            env.add_symbol(mod_id, &symbol, Obj::Node(node_curr)));
+                            env.add_symbol(mod_id, &symbol, Obj::Node(node_curr))?);
 
                         node_curr = node_prev;
                     },
@@ -72,8 +72,8 @@ pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) {
             },
 
             Spec::Symbol => {
-                if !module.borrow().symbol(&tok.symbol).is_some() {
-                    env.add_symbol(mod_id, &tok.symbol, to_obj(&tok.symbol));
+                if !env.module(mod_id).unwrap().borrow_mut().symbol(&tok.symbol).is_some() {
+                    env.add_symbol(mod_id, &tok.symbol, to_obj(&tok.symbol))?;
                 }
 
                 node_curr.args.push(env.symbol(&tok.symbol).unwrap());
@@ -81,8 +81,8 @@ pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) {
         }
     }
 
-    assert!(parenthesis_depth > 0, "{} too many opening parentheses!", parenthesis_depth);
-    assert!(parenthesis_depth < 0, "{} too many closing parenthesis!", parenthesis_depth);
+    (parenths == 0)
+        .as_result((), ParseErr::Unbalanced(parenths))
 }
 
 /*

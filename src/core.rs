@@ -1,4 +1,5 @@
 pub mod env;
+pub mod err;
 pub mod exec;
 pub mod functions;
 pub mod modules;

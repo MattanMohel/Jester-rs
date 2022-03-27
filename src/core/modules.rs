@@ -1,7 +1,9 @@
 
+use crate::core::err::AsResult;
+
 use super::{
     objects::Obj, 
-    env::{Env, Shared}, 
+    env::{Env, Shared}, err::ParseErr, 
 };
 
 use std::{
@@ -13,13 +15,22 @@ use std::{
 pub struct Mod {
     symbols: HashMap<String, Shared<Obj>>,
     imports: Vec<Rc<RefCell<Mod>>>,
+
+    id: usize,
+}
+
+impl PartialEq for Mod {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 impl Mod {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(id: usize) -> Self {
         Self {
             symbols: HashMap::new(),
             imports: Vec::new(),
+            id: id,
         }
     }
 
@@ -27,10 +38,14 @@ impl Mod {
         self.imports.push(module.clone());
     }
 
-    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> Shared<Obj> {
+    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> Result<Shared<Obj>, ParseErr> {
+        self.symbols.contains_key(symbol)
+            .assert(ParseErr::DupSym(symbol.clone()))?;
+
         self.symbols.insert(
             symbol.clone(), 
-            value.clone()).unwrap()
+            value.clone())
+                .into_result(ParseErr::NonSym(symbol.clone()))
     }
 
     pub fn symbol(&self, symbol: &String) -> Option<Shared<Obj>> {

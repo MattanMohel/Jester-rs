@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "Jester-rs"
+name = "jester-rs"
 version = "0.1.0"
