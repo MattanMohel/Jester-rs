@@ -60,9 +60,8 @@ pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> Resu
                 match nodes_prev.pop() {
                     Some(mut node_prev) => {
                         let symbol = env.unique_symbol();
-                        
-                        node_prev.args.push(
-                            env.add_symbol(mod_id, &symbol, Obj::Node(node_curr))?);
+                        env.add_symbol(mod_id, &symbol, Obj::Node(node_curr))?;
+                        node_prev.args.push(env.symbol(&symbol).unwrap());
 
                         node_curr = node_prev;
                     },

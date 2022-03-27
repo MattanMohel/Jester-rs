@@ -45,17 +45,17 @@ impl Env {
     /////Symbols & Objects/////
     ///////////////////////////
     
-    pub fn add_symbol(&mut self, mod_id: &String, symbol: &String, value: Obj) -> Result<Shared<Obj>, ParseErr> {        
+    pub fn add_symbol(&mut self, mod_id: &String, symbol: &String, value: Obj) -> Result<(), ParseErr> {        
         self.symbols.push(Rc::new(RefCell::new(value)));
         
         self.modules.get(mod_id)
             .into_result(ParseErr::NonMod(mod_id.clone()))?
-            .deref()
-            .borrow_mut()       
-                .add_symbol(symbol, self.symbols.last().unwrap())
+            .deref().borrow_mut()
+            
+            .add_symbol(symbol, self.symbols.last().unwrap())
     }
 
-    pub fn unique_symbol(&mut self) -> String {
+    pub fn unique_symbol(&self) -> String {
         (*self.gen.borrow_mut()) += 1;
         format!("__{}-{}__", GEN_SYM, (*self.gen.borrow()) - 1)   
     }
@@ -66,12 +66,12 @@ impl Env {
 
     pub fn add_module(&mut self, mod_id: &String) -> Result<(), ParseErr> {
         self.modules.insert(
-            mod_id.clone(), 
-            Rc::new(RefCell::new(Mod::new(self.gen_mod))))
-                .as_result_rev((), ParseErr::DupMod(mod_id.clone()))
+            mod_id.clone(), Rc::new(RefCell::new(Mod::new(self.gen_mod))))
+            
+            .as_result_rev((), ParseErr::DupMod(mod_id.clone()))
     }
 
-    pub fn add_module_from_file(&mut self, mod_id: &String, path: &String) -> Result<(), ParseErr>{
+    pub fn add_module_from_file(&mut self, mod_id: &String, path: &String) -> Result<(), ParseErr> {
         let src = fs::read_to_string(path)?;   
         let toks = to_toks(&src);
 

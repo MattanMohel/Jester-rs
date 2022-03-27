@@ -38,14 +38,9 @@ impl Mod {
         self.imports.push(module.clone());
     }
 
-    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> Result<Shared<Obj>, ParseErr> {
-        self.symbols.contains_key(symbol)
-            .assert(ParseErr::DupSym(symbol.clone()))?;
-
-        self.symbols.insert(
-            symbol.clone(), 
-            value.clone())
-                .into_result(ParseErr::NonSym(symbol.clone()))
+    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> Result<(), ParseErr> {
+        self.symbols.insert(symbol.clone(), value.clone())
+            .as_result_rev((), ParseErr::DupSym(symbol.clone()))
     }
 
     pub fn symbol(&self, symbol: &String) -> Option<Shared<Obj>> {

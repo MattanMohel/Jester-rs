@@ -32,7 +32,7 @@ impl AsResult for bool {
     }
 
     fn as_result_rev<O, E>(&self, ok: O, err: E) -> Result<O, E> {
-        if !(*self) {
+        if !self {
             Ok(ok)
         } else {
             Err(err)
