@@ -2,10 +2,11 @@ use crate::core::{
     env::Env,
     objects::Obj,
     nodes::Node, 
+
     err::{
-        ParseErrType::*, 
+        ErrType::*, 
         AsResult, 
-        ParseErr
+        JtsErr
     },
 };
 
@@ -42,7 +43,7 @@ this form can be easily traversed and evaluated
 
 */
 
-pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> ParseErr {
+pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> JtsErr {
     env.add_module(mod_id)?; 
 
     let mut node_curr  = Node::default();
@@ -64,8 +65,8 @@ pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> Pars
                 match nodes_prev.pop() {
                     Some(mut node_prev) => {
                         let symbol = env.unique_symbol();  
-                                             
-                        env.add_symbol(mod_id, &symbol, Obj::Node(node_curr))?;
+
+                        env.add_symbol_to(mod_id, &symbol, Obj::Node(node_curr))?;
                         node_prev.args.push(env.symbol(&symbol)?);
 
                         node_curr = node_prev;
@@ -77,7 +78,7 @@ pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> Pars
 
             Spec::Symbol => {
                 if !env.module(mod_id).unwrap().borrow_mut().symbol(&tok.symbol).is_some() {
-                    env.add_symbol(mod_id, &tok.symbol, to_obj(&tok.symbol))?;
+                    env.add_symbol_to(mod_id, &tok.symbol, to_obj(&tok.symbol))?;
                 }
 
                 node_curr.args.push(env.symbol(&tok.symbol).unwrap());
@@ -85,8 +86,7 @@ pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> Pars
         }
     }
 
-    (parenth == 0)
-        .as_result((), Unbalanced)
+    (parenth == 0).as_result((), UnbalancedParentheses)
 }
 
 /*

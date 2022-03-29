@@ -21,9 +21,3 @@ impl fmt::Display for Tok {
         write!(f, "{}", self.symbol)
     }
 }
-
-impl Tok {
-    pub fn new(symbol: &String, spec: Spec, line: usize) -> Tok {
-        Tok { symbol: symbol.clone(), spec: spec, line: line }
-    }
-}

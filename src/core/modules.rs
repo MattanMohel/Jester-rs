@@ -2,9 +2,9 @@ use super::{
     objects::Obj, 
     env::Shared, 
     err::{
-        ParseErrType::*, 
+        ErrType::*, 
         AsResult,
-        ParseErr
+        JtsErr
     }, 
 };
 
@@ -35,17 +35,17 @@ impl Mod {
         }
     }
 
-    pub fn add_import(&mut self, module: &Shared<Mod>) -> ParseErr {
+    pub fn add_import(&mut self, module: &Shared<Mod>) -> JtsErr {
         self.imports.iter()
             .any(|module| { module.deref().borrow().id == module.deref().borrow().id })
-            .into_result(DupMod)?;
+            .into_result(DuplicateModule)?;
 
         self.imports.push(module.clone());
         Ok(())
     }
 
-    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> ParseErr {
-        self.symbols.contains_key(symbol).as_result_rev((), DupSym)?;
+    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> JtsErr {
+        self.symbols.contains_key(symbol).as_result_rev((), DuplicateSymbol)?;
         self.symbols.insert(symbol.clone(), value.clone());
         Ok(())
     }

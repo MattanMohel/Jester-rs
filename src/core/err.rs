@@ -86,52 +86,46 @@ impl<T> AsResult<T> for Option<T> {
     }
 }
 
-///////////////////////////
-/////Parse-Time Errors/////
-///////////////////////////
+/////////////////////////////////////
+/////Jester-Script Error Defines/////
+/////////////////////////////////////
 
-pub type ParseErr<T = ()> = Result<T, ParseErrType>;
+pub type JtsErr<T = ()> = Result<T, ErrType>;
 
 #[derive(Debug)]
-pub enum ParseErrType {
+pub enum ErrType {
     // symbol does not exist
-    NonSym,
+    MissingSymbol,
     // symbol is a duplicate
-    DupSym,
+    DuplicateSymbol,
     // symbol is disallowed
-    DisSym,
-
+    DisallowedSymbol,
     // module does not exist
-    NonMod,
+    MissingModule,
     // module is a duplicate
-    DupMod,
-    
+    DuplicateModule, 
     // parentheses are unbalanced
-    Unbalanced,
-    
+    UnbalancedParentheses,  
     // generic IO errors
     IoErr,
+    // Missing 'main' function
+    NoEntry,
+    // types cannot match
+    MismatchedType,
+    // assigning to const value
+    ConstAssign
 }
 
-impl Error for ParseErrType {}
+impl Error for ErrType {}
 
-impl Display for ParseErrType {
+impl Display for ErrType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Parse Error!")
+        write!(f, "Toolchain Error!")
     }
 }
 
-impl From<io::Error> for ParseErrType {
+impl From<io::Error> for ErrType {
     fn from(cause: io::Error) -> Self {
         Self::IoErr
     }
-}
-
-/////////////////////////////
-/////Compile-Time Errors/////
-/////////////////////////////
-
-enum EvalErrType {
-    MismatchedType,
-    ConstSym,
 }

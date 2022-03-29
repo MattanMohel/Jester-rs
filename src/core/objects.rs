@@ -1,7 +1,12 @@
 
 use super:: {
     nodes::Node,
-    types::TypeId,
+    types::TypeId, 
+
+    functions::{
+        FnNative, 
+        FnBridge, Bridge
+    },
 };
 
 use std::fmt;
@@ -21,8 +26,8 @@ pub enum Obj {
 
     // functions
     FnRust(),
-    FnNative(),
-    FnBridge(),
+    FnNative(FnNative),
+    FnBridge(FnBridge),
 
     Node(Node),
     Ref(usize),
@@ -36,10 +41,20 @@ impl fmt::Display for Obj {
     }
 }
 
+impl Default for Obj {
+    fn default() -> Self {
+        Obj::Nil()
+    }
+}
+
 impl Obj {
 
     pub fn new_const<T: TypeId>(val: T) -> Obj {
         val.as_variant()
+    }
+
+    pub fn new_bridge(bridge: Bridge) -> Obj {
+        Obj::FnBridge(FnBridge { bridge: bridge })
     }
 
     pub fn set(&mut self, other: &Obj) {
