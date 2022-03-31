@@ -6,6 +6,11 @@ use super:: {
     functions::{
         FnNative, 
         FnBridge, Bridge
+    }, 
+    
+    err::{
+        JtsErr, 
+        ErrType::*
     },
 };
 
@@ -48,6 +53,61 @@ impl Default for Obj {
 }
 
 impl Obj {
+    pub fn is_u32(&self) -> JtsErr<&u32> {
+        match self {
+            Obj::U32(x) => Ok(x),
+            _ => Err(MismatchedType)
+        }
+    }
+
+    pub fn is_u64(&self) -> JtsErr<&u64> {
+        match self {
+            Obj::U64(x) => Ok(x),
+            _ => Err(MismatchedType)
+        }
+    }
+
+    pub fn is_i32(&self) -> JtsErr<&i32> {
+        match self {
+            Obj::I32(x) => Ok(x),
+            _ => Err(MismatchedType)
+        }
+    }
+
+    pub fn is_i64(&self) -> JtsErr<&i64> {
+        match self {
+            Obj::I64(x) => Ok(x),
+            _ => Err(MismatchedType)
+        }
+    }
+
+    pub fn is_f32(&self) -> JtsErr<&f32> {
+        match self {
+            Obj::F32(x) => Ok(x),
+            _ => Err(MismatchedType)
+        }
+    }
+
+    pub fn is_f64(&self) -> JtsErr<&f64> {
+        match self {
+            Obj::F64(x) => Ok(x),
+            _ => Err(MismatchedType)
+        }
+    }
+
+    pub fn is_str(&self) -> JtsErr<&String> {
+        match self {
+            Obj::Str(x) => Ok(x),
+            _ => Err(MismatchedType)
+        }
+    }
+
+    pub fn is_node(&self) -> JtsErr<&Node> {
+        match self {
+            Obj::Node(x) => Ok(x),
+            _ => Err(MismatchedType)
+        }
+    }
 
     pub fn new_const<T: TypeId>(val: T) -> Obj {
         val.as_variant()
@@ -73,10 +133,13 @@ impl Obj {
             Obj::U64(x) => x.to_string(),
             Obj::I32(x) => x.to_string(),
             Obj::I64(x) => x.to_string(),
-            Obj::Nil() => String::from("nil"),     
             Obj::Str(x) => x.clone(),
-
-            _ => String::new()
+            Obj::FnRust() => "rust".to_string(),
+            Obj::FnNative(_) => "native".to_string(),
+            Obj::FnBridge(_) => "bridge".to_string(),
+            Obj::Node(_) => "node".to_string(),
+            Obj::Ref(_) => "quote".to_string(),
+            Obj::Nil() => String::from("nil"),     
         }
     }
 

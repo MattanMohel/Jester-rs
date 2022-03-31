@@ -15,7 +15,7 @@ impl Env {
                 print!("{}", obj);
             }
 
-            Obj::Nil()
+            Ok(Obj::Nil())
         }))
     }
 }

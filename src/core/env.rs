@@ -23,7 +23,7 @@ use std::{
     cell::RefCell,
     ops::Deref, 
     rc::Rc, 
-    fs, 
+    fs, borrow::Borrow, 
 };
 
 const MAIN_FN: &str = "main";
@@ -81,7 +81,9 @@ impl Env {
     }
 
     pub fn add_symbol(&mut self, symbol: &str, value: Obj) -> JtsErr {        
-        self.add_symbol_to(&String::from(PRELUDE), &String::from(symbol), value)
+        self.add_symbol_to(&String::from(PRELUDE), &String::from(symbol), value);
+        println!("added symbol {} is {}", symbol, self.symbol(&symbol.to_string())?.deref().borrow());
+        Ok(())
     }
 
     fn gen_unique_symbol(&mut self) {
@@ -120,12 +122,12 @@ impl Env {
     }
 
     pub fn symbol(&self, symbol: &String) -> JtsErr<Shared<Obj>> {
-        self.modules.values().find_map(|module| { module.borrow().symbol(symbol) })
+        self.modules.values().find_map(|module| { module.deref().borrow().symbol(symbol) })
             .into_result(MissingSymbol)
     }
 
     fn main_fn(&self) -> JtsErr<Shared<Obj>> {
-        return self.symbol(&String::from(MAIN_FN)).map_err(|_| { NoEntry });
+        self.symbol(&String::from(MAIN_FN)).map_err(|_| { NoEntry })
     }
 
     //////////////////
@@ -133,7 +135,6 @@ impl Env {
     //////////////////
     
     pub fn run(&self) -> JtsErr<Obj> {
-        let res = self.main_fn()?.deref().borrow().eval(self);
-        Ok(res)
+        self.main_fn()?.deref().borrow().eval(self)
     }
 }

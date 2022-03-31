@@ -94,6 +94,7 @@ pub type JtsErr<T = ()> = Result<T, ErrType>;
 
 #[derive(Debug)]
 pub enum ErrType {
+    Todo,
     // symbol does not exist
     MissingSymbol,
     // symbol is a duplicate
@@ -113,7 +114,9 @@ pub enum ErrType {
     // types cannot match
     MismatchedType,
     // assigning to const value
-    ConstAssign
+    ConstAssign,
+    // tried executing a non-callable
+    NonCallable,
 }
 
 impl Error for ErrType {}

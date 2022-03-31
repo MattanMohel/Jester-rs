@@ -1,10 +1,19 @@
 use super::{
     env::Env, 
     objects::Obj,
-    nodes::{Node, NodeIter}
+
+    nodes::{
+        Node, 
+        NodeIter
+    }, 
+    
+    err::{
+        JtsErr,
+        ErrType::*,
+    }
 };
 
-pub type Bridge = fn(&Env, &mut NodeIter) -> Obj;
+pub type Bridge = fn(&Env, &mut NodeIter) -> JtsErr<Obj>;
 
 #[derive(Clone)]
 pub struct FnBridge {
@@ -13,7 +22,7 @@ pub struct FnBridge {
 
 impl FnBridge {
     #[inline]
-    pub fn invoke(&self, env: &Env, args: &mut NodeIter) -> Obj {
+    pub fn invoke(&self, env: &Env, args: &mut NodeIter) -> JtsErr<Obj> {
         (self.bridge)(env, args)
     }
 }
@@ -26,9 +35,10 @@ pub struct FnNative {
 
 impl FnNative {
     #[inline]
-    pub fn invoke(&self, env: &Env, args: &mut NodeIter) -> Obj {
+    pub fn invoke(&self, env: &Env, args: &mut NodeIter) -> JtsErr<Obj> {
         // apply args...
         // exec body... 
-        todo!()
+        println!("native call!");
+        Err(Todo)
     }
 }

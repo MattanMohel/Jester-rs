@@ -1,5 +1,9 @@
 use super::{objects::Obj, functions::FnNative};
 
+pub fn variant_eq<T>(a: &T, b: &T) -> bool {
+    std::mem::discriminant(a) == std::mem::discriminant(b)
+}
+
 pub trait TypeId {
     fn as_variant(self) -> Obj;
 }

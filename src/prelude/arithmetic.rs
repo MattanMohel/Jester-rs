@@ -13,25 +13,25 @@ impl Env {
         self.add_symbol("+", Obj::new_bridge(|_, node| {
             let mut fst = node.shift().get(0).clone();
             node.for_each(|rst| add_to(&mut fst, rst.deref()));
-            fst
+            Ok(fst)
         }))?;
 
         self.add_symbol("-", Obj::new_bridge(|_, node| {
             let mut fst = node.shift().get(0).clone();
             node.for_each(|rst| sub_to(&mut fst, rst.deref()));
-            fst
+            Ok(fst)
         }))?;
 
         self.add_symbol("*", Obj::new_bridge(|_, node| {
             let mut fst = node.shift().get(0).clone();
             node.for_each(|rst| mul_to(&mut fst, rst.deref()));
-            fst
+            Ok(fst)
         }))?;
 
         self.add_symbol("/", Obj::new_bridge(|_, node| {
             let mut fst = node.shift().get(0).clone();
             node.for_each(|rst| div_to(&mut fst, rst.deref()));
-            fst
+            Ok(fst)
         }))
     }
 }
