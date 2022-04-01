@@ -107,7 +107,6 @@ impl Env {
         self.gen_mod += 1;
 
         let mut module = Mod::new(self.gen_mod);
-
         if prelude {
             module.add_import(&self.module(&String::from(PRELUDE))?)?;
         }
