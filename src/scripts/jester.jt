@@ -1,1 +1,2 @@
-(print 10)
+(println (* 10 10))
+(println (+ 100 (* 100 2)))

@@ -6,7 +6,7 @@ use super::{
         ErrType::*, 
         JtsErr, 
         AsResult
-    },
+    }, nodes::Node,
 };
 
 use crate::{
@@ -23,18 +23,19 @@ use std::{
     cell::RefCell,
     ops::Deref, 
     rc::Rc, 
-    fs, borrow::Borrow, 
+    fs,
 };
 
-const MAIN_FN: &str = "main";
-const GEN_SYM: &str = "gensym";
-const PRELUDE: &str = "prelude";
+pub const MAIN: &str = "main";
+pub const GEN_SYM: &str = "gensym";
+pub const PRELUDE: &str = "prelude";
 
 pub type Shared<T> = Rc<RefCell<T>>;
 
 pub struct Env {
     symbols: Vec<Shared<Obj>>,
     modules: HashMap<String, Shared<Mod>>,
+
     gen_sym: usize,
     gen_mod: usize,
 
@@ -52,7 +53,7 @@ impl Env {
         };
 
         // should never error
-        env.add_module(&String::from(PRELUDE))?;
+        env.add_module(&String::from(PRELUDE), false)?;
         env.gen_unique_symbol();
 
         env.arithmetic_lib()?;
@@ -81,8 +82,7 @@ impl Env {
     }
 
     pub fn add_symbol(&mut self, symbol: &str, value: Obj) -> JtsErr {        
-        self.add_symbol_to(&String::from(PRELUDE), &String::from(symbol), value);
-        println!("added symbol {} is {}", symbol, self.symbol(&symbol.to_string())?.deref().borrow());
+        self.add_symbol_to(&String::from(PRELUDE), &String::from(symbol), value)?;
         Ok(())
     }
 
@@ -103,9 +103,16 @@ impl Env {
     /////Modules/////
     /////////////////
 
-    pub fn add_module(&mut self, mod_id: &String) -> JtsErr {
+    pub fn add_module(&mut self, mod_id: &String, prelude: bool) -> JtsErr {
         self.gen_mod += 1;
-        self.modules.insert(mod_id.clone(), Rc::new(RefCell::new(Mod::new(self.gen_mod - 1))))   
+
+        let mut module = Mod::new(self.gen_mod);
+
+        if prelude {
+            module.add_import(&self.module(&String::from(PRELUDE))?)?;
+        }
+
+        self.modules.insert(mod_id.clone(), Rc::new(RefCell::new(module)))   
             .as_result_rev((), DuplicateModule)
     }
 
@@ -126,15 +133,22 @@ impl Env {
             .into_result(MissingSymbol)
     }
 
-    fn main_fn(&self) -> JtsErr<Shared<Obj>> {
-        self.symbol(&String::from(MAIN_FN)).map_err(|_| { NoEntry })
+    fn main_fn(&self) -> JtsErr<Shared<Node>> {
+        Ok(self.module(&String::from(MAIN))?.deref().borrow().body())
     }
 
     //////////////////
     /////Run-Time/////
     //////////////////
     
-    pub fn run(&self) -> JtsErr<Obj> {
-        self.main_fn()?.deref().borrow().eval(self)
+    pub fn run(&self) -> JtsErr {
+        let body = self.main_fn()?;
+        let body = body.deref().borrow();
+
+        for obj in body.into_iter() {
+            obj.eval(self)?;
+        }
+
+        Ok(())
     }
 }

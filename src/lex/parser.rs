@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use crate::core::{
     env::Env,
     objects::Obj,
@@ -44,7 +46,7 @@ this form can be easily traversed and evaluated
 */
 
 pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> JtsErr {
-    env.add_module(mod_id)?; 
+    env.add_module(mod_id, true)?; 
 
     let mut node_curr  = Node::default();
     let mut nodes_prev = Vec::new();
@@ -85,6 +87,8 @@ pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> JtsE
             }
         }
     }
+
+    env.module(mod_id)?.borrow_mut().add_body(node_curr);
 
     (parenth == 0).as_result((), UnbalancedParentheses)
 }

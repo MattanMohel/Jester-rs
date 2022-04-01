@@ -2,7 +2,7 @@
 use std::{
     cell::{RefCell, Ref, RefMut}, 
     rc::Rc, 
-    ops::Deref
+    ops::Deref, iter::Peekable
 };
 
 use super::{
@@ -26,7 +26,6 @@ impl Default for Node {
         Node { args: Vec::new() }
     }
 }
-
 
 impl<'a> IntoIterator for &'a Node {
     type Item = Ref<'a, Obj>;
@@ -60,7 +59,7 @@ impl<'a> Iterator for NodeIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.i += 1;
-        self.args.get(self.i - 1)
+        self.args.get(self.offset + self.i - 1)
             .map(|symbol| { symbol.deref().borrow() })
     }
 }

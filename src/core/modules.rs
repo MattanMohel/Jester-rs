@@ -1,6 +1,8 @@
 use super::{
     objects::Obj, 
     env::Shared, 
+    nodes::Node,
+
     err::{
         ErrType::*, 
         AsResult,
@@ -10,12 +12,13 @@ use super::{
 
 use std::{
     collections::HashMap, 
-    ops::Deref, 
+    ops::Deref, rc::Rc, cell::RefCell, 
 };
 
 pub struct Mod {
-    symbols: HashMap<String, Shared<Obj>>,
+    pub symbols: HashMap<String, Shared<Obj>>,
     imports: Vec<Shared<Mod>>,
+    body: Shared<Node>, 
 
     id: usize,
 }
@@ -31,13 +34,14 @@ impl Mod {
         Self {
             symbols: HashMap::new(),
             imports: Vec::new(),
+            body: Rc::default(),
             id: id,
         }
     }
 
     pub fn add_import(&mut self, module: &Shared<Mod>) -> JtsErr {
         self.imports.iter()
-            .any(|module| { module.deref().borrow().id == module.deref().borrow().id })
+            .all(|iter| { module.deref().borrow().id != iter.deref().borrow().id })
             .into_result(DuplicateModule)?;
 
         self.imports.push(module.clone());
@@ -50,6 +54,10 @@ impl Mod {
         Ok(())
     }
 
+    pub fn add_body(&mut self, body: Node) {
+        self.body = Rc::new(RefCell::new(body));
+    }
+
     pub fn symbol(&self, symbol: &String) -> Option<Shared<Obj>> {
         match self.symbols.get(symbol) {
             Some(symbol) => Some(symbol.clone()),
@@ -60,5 +68,9 @@ impl Mod {
                         .map(|symbol| { symbol.clone() }) 
                 })  
         }
+    }
+
+    pub fn body(&self) -> Shared<Node> {
+        self.body.clone()
     }
 }
