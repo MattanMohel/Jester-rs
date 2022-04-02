@@ -11,7 +11,8 @@ fn main() -> JtsErr {
     let mut env = Env::new()?;
 
     env.add_module_from_file(&String::from("main"), &String::from("D:\\repo\\Rust\\Jester-rs\\src\\scripts\\jester.jt"))?;
-    env.run()?;
+    env.run_repl()?;
+    //env.run_main()?;
 
     Ok(())
 }

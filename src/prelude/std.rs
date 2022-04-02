@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{ops::Deref, borrow::Borrow};
 
 use crate::core::{
     env::Env, 
@@ -9,16 +9,12 @@ use crate::core::{
 
 impl Env {
     pub fn std_lib(&mut self) -> JtsErr {
+        self.add_symbol("set", Obj::new_bridge(|env, node| {
+            let res = env.eval(node.get(1)?.deref())?;
+            node.get_mut(0)?.set(&res);
+            Ok(res)
+        }))?;
 
-        // (defun main ...)
-        self.add_symbol("defun", Obj::new_bridge(|_, node| {
-            let mut fun = node.get_mut(0);
-
-            fun.set_to(FnNative {
-                body: node.get(1).is_node()?.clone()
-            });
-
-            Ok(fun.clone())
-        }))
+        Ok(())
     }
 }

@@ -13,7 +13,7 @@ use crate::core::{
 };
 
 use super::{
-    lexer::to_obj,
+    lexer::{to_obj, to_toks},
     tokens::{Tok, Spec},
 };
 
@@ -45,9 +45,20 @@ this form can be easily traversed and evaluated
 
 */
 
-pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> JtsErr {
-    env.add_module(mod_id, true)?; 
+pub fn parse_file(env: &mut Env, mod_id: &String, path: &String) -> JtsErr<Node> {
+    let src = std::fs::read_to_string(path)?;   
+    let toks = to_toks(&src);
 
+    parse_toks(env, mod_id, &toks)
+}
+
+pub fn parse_src(env: &mut Env, mod_id: &String, src: &String) -> JtsErr<Node> {
+    let toks = to_toks(&src);
+
+    parse_toks(env, mod_id, &toks)
+}
+
+fn parse_toks(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> JtsErr<Node> {
     let mut node_curr  = Node::default();
     let mut nodes_prev = Vec::new();
     let mut parenth: isize = 0;
@@ -88,9 +99,9 @@ pub fn module_from_file(env: &mut Env, mod_id: &String, toks: &Vec<Tok>) -> JtsE
         }
     }
 
-    env.module(mod_id)?.borrow_mut().add_body(node_curr);
+    // env.module(mod_id)?.borrow_mut().add_body(node_curr);
 
-    (parenth == 0).as_result((), UnbalancedParentheses)
+    (parenth == 0).as_result(node_curr, UnbalancedParentheses)
 }
 
 /*

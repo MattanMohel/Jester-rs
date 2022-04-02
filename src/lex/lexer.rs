@@ -104,7 +104,11 @@ pub fn to_toks(src: &String) -> Vec<Tok> {
         }
     }
 
+    if let Some(tok) = to_tok(&lex, line) {
+        toks.push(tok);
+    }
+
     assert!(depth == 0);
 
     toks
-}
+} 

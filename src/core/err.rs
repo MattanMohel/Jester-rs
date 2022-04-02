@@ -117,6 +117,8 @@ pub enum ErrType {
     ConstAssign,
     // tried executing a non-callable
     NonCallable,
+    // index out of bounds
+    OutOfBounds,
 }
 
 impl Error for ErrType {}

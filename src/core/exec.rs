@@ -10,27 +10,27 @@ use super::{
     }, 
 };
 
-impl Obj {
-    pub fn eval(&self, env: &Env) -> JtsErr<Obj> {
-        match self {
+impl Env {
+    pub fn eval(&self, obj: &Obj) -> JtsErr<Obj> {
+        match obj {
             Obj::Node(node) if !node.is_empty() => {
-                match node.get(0).deref() {
+                match node.get(0)?.deref() {
                     Obj::FnBridge(_) | 
                     Obj::FnNative(_) | 
-                    Obj::FnRust() if !node.args.is_empty() => Obj::exec(node, env),
+                    Obj::FnRust() if !node.args.is_empty() => self.exec(node),
     
-                    _ => Ok(Obj::Nil())
+                    _ => Ok(obj.clone())
                 }          
             }      
 
-            _ => Ok(self.clone())
+            _ => Ok(obj.clone())
         }
     }
 
-    fn exec(node: &Node, env: &Env) -> JtsErr<Obj> {
-        match *node.get(0) {
-            Obj::FnBridge(ref bridge) => bridge.invoke(env, node.into_iter().shift()),
-            Obj::FnNative(ref native) => native.invoke(env, node.into_iter().shift()),
+    fn exec(&self, node: &Node) -> JtsErr<Obj> {
+        match *node.get(0)? {
+            Obj::FnBridge(ref bridge) => bridge.invoke(self, node.into_iter().shift()),
+            Obj::FnNative(ref native) => native.invoke(self, node.into_iter().shift()),
             Obj::FnRust() => unreachable!(),
 
             _ => Err(NonCallable)

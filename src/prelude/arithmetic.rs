@@ -4,46 +4,53 @@ use crate::core::{
     env::Env, 
     objects::Obj, 
     err::JtsErr,
-    operations::*, 
 };
 
 impl Env {
-    pub fn arithmetic_lib(&mut self) -> JtsErr {
-
+    pub fn arith_lib(&mut self) -> JtsErr {
         self.add_symbol("+", Obj::new_bridge(|env, node| {
-            let mut fst = node.get(0).clone();
+            let mut fst = node.get(0)?.clone();
 
             for rst in node.shift() {
-                fst.add(rst.eval(env)?);
+                fst.add(env.eval(rst.deref())?);
             }
             Ok(fst)
         }))?;
 
         self.add_symbol("-", Obj::new_bridge(|env, node| {
-            let mut fst = node.get(0).clone();
+            let mut fst = node.get(0)?.clone();
 
             for rst in node.shift() {
-                fst.sub(rst.eval(env)?);
+                fst.sub(env.eval(rst.deref())?);
             }
             Ok(fst)
         }))?;
 
 
         self.add_symbol("*", Obj::new_bridge(|env, node| {
-            let mut fst = node.get(0).clone();
+            let mut fst = node.get(0)?.clone();
 
             for rst in node.shift() {
-                fst.mul(rst.eval(env)?);
+                fst.mul(env.eval(rst.deref())?);
             }
             Ok(fst)
         }))?;
 
 
         self.add_symbol("/", Obj::new_bridge(|env, node| {
-            let mut fst = node.get(0).clone();
+            let mut fst = node.get(0)?.clone();
 
             for rst in node.shift() {
-                fst.div(rst.eval(env)?);
+                fst.div(env.eval(rst.deref())?);
+            }
+            Ok(fst)
+        }))?;
+
+        self.add_symbol("%", Obj::new_bridge(|env, node| {
+            let mut fst = node.get(0)?.clone();
+
+            for rst in node.shift() {
+                fst.modulos(env.eval(rst.deref())?);
             }
             Ok(fst)
         }))?;

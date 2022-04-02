@@ -27,7 +27,7 @@ impl FnBridge {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct FnNative {
     pub body:   Node,
     //pub params: Node,

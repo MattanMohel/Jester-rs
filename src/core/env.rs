@@ -1,29 +1,26 @@
 use super::{
     objects::Obj,
     modules::Mod,
+    nodes::Node,
 
     err::{
         ErrType::*, 
         JtsErr, 
         AsResult
-    }, nodes::Node,
+    },
 };
 
-use crate::{
-    lex::{
-        parser::module_from_file, 
-        lexer::to_toks
-    },
-
-    prelude::arithmetic::*,
+use crate::lex::parser::{
+    parse_file, 
+    parse_src
 };
 
 use std::{
     collections::HashMap,
     cell::RefCell,
     ops::Deref, 
+    io::Write,
     rc::Rc, 
-    fs,
 };
 
 pub const MAIN: &str = "main";
@@ -52,12 +49,14 @@ impl Env {
             curr_unique_sym: String::new(),
         };
 
-        // should never error
-        env.add_module(&String::from(PRELUDE), false)?;
         env.gen_unique_symbol();
 
-        env.arithmetic_lib()?;
+        // create and populate prelude module
+        env.add_module(&String::from(PRELUDE), false)?;
+        env.arith_lib()?;
         env.io_lib()?;
+        env.list_lib()?;
+        env.std_lib()?;
 
         Ok(env)
     }
@@ -116,10 +115,14 @@ impl Env {
     }
 
     pub fn add_module_from_file(&mut self, mod_id: &String, path: &String) -> JtsErr {
-        let src = fs::read_to_string(path)?;   
-        let toks = to_toks(&src);
+        if !self.modules.contains_key(mod_id) {
+            self.add_module(mod_id, true)?; 
+        }
 
-        module_from_file(self, mod_id, &toks)
+        let body = parse_file(self, mod_id, path)?;
+        self.module(mod_id)?.borrow_mut().add_body(body);
+
+        Ok(())
     }
 
     pub fn module(&self, mod_id: &String) -> JtsErr<Shared<Mod>> {
@@ -132,7 +135,7 @@ impl Env {
             .into_result(MissingSymbol)
     }
 
-    fn main_fn(&self) -> JtsErr<Shared<Node>> {
+    pub fn main(&self) -> JtsErr<Shared<Node>> {
         Ok(self.module(&String::from(MAIN))?.deref().borrow().body())
     }
 
@@ -140,14 +143,44 @@ impl Env {
     /////Run-Time/////
     //////////////////
     
-    pub fn run(&self) -> JtsErr {
-        let body = self.main_fn()?;
-        let body = body.deref().borrow();
+    pub fn run(&self, node: &Node) -> JtsErr<Obj> {
+        node.into_iter()
+            .progn(|obj|{ self.eval(obj.deref()) })
+    }
 
-        for obj in body.into_iter() {
-            obj.eval(self)?;
+    pub fn run_main(&self) -> JtsErr<Obj> {
+        self.main()?
+            .deref()
+            .borrow()
+            .into_iter()
+            .progn(|obj|{ self.eval(obj.deref()) })
+    }
+
+    pub fn run_repl(&mut self) -> JtsErr<Obj> {
+        use std::io;
+
+        let mut res = Obj::Nil();
+        let mut count: usize = 0;
+
+        loop {
+            print!("[{}]>> ", count);
+            io::stdout().flush()?;
+            count += 1;
+
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+
+            if input == "--quit" {
+                break;
+            }
+
+            let body = parse_src(self, &String::from(PRELUDE), &input.trim().to_string())?;
+
+            res = self.run(&body)?;
+
+            println!("{}", res);
         }
 
-        Ok(())
+        Ok(res)
     }
 }
