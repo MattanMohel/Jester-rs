@@ -12,7 +12,7 @@ impl Env {
             let mut fst = node.get(0)?.clone();
 
             for rst in node.shift() {
-                fst.add(env.eval(rst.deref())?);
+                fst.add(env.eval(rst.deref())?)?;
             }
             Ok(fst)
         }))?;
@@ -21,7 +21,7 @@ impl Env {
             let mut fst = node.get(0)?.clone();
 
             for rst in node.shift() {
-                fst.sub(env.eval(rst.deref())?);
+                fst.sub(env.eval(rst.deref())?)?;
             }
             Ok(fst)
         }))?;
@@ -31,7 +31,7 @@ impl Env {
             let mut fst = node.get(0)?.clone();
 
             for rst in node.shift() {
-                fst.mul(env.eval(rst.deref())?);
+                fst.mul(env.eval(rst.deref())?)?;
             }
             Ok(fst)
         }))?;
@@ -41,7 +41,7 @@ impl Env {
             let mut fst = node.get(0)?.clone();
 
             for rst in node.shift() {
-                fst.div(env.eval(rst.deref())?);
+                fst.div(env.eval(rst.deref())?)?;
             }
             Ok(fst)
         }))?;
@@ -50,7 +50,7 @@ impl Env {
             let mut fst = node.get(0)?.clone();
 
             for rst in node.shift() {
-                fst.modulos(env.eval(rst.deref())?);
+                fst.modulos(env.eval(rst.deref())?)?;
             }
             Ok(fst)
         }))?;

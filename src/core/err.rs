@@ -112,7 +112,11 @@ pub enum ErrType {
     // Missing 'main' function
     NoEntry,
     // types cannot match
-    MismatchedType,
+    MismatchedTypes,
+    // types cannot be compared
+    IncomparableTypes,
+    // Types cannot be cast
+    ErrCastTypes,
     // assigning to const value
     ConstAssign,
     // tried executing a non-callable

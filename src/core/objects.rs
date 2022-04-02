@@ -22,6 +22,8 @@ pub enum Obj {
     F32(f32),
     F64(f64),
 
+    Bool(bool),
+
     // heaps
     Str(String),
 
@@ -74,6 +76,7 @@ impl Obj {
             Obj::I32(x) => x.to_string(),
             Obj::I64(x) => x.to_string(),
             Obj::Str(x) => x.clone(),
+            Obj::Bool(x) => x.to_string(),
 
             Obj::Lazy(x) => x.borrow().to_string(),
 
@@ -85,9 +88,9 @@ impl Obj {
                         format!("{} {}", acc, o.to_string())
                     }})),
 
-            Obj::FnRust() =>    "<rust>()".to_string(),
-            Obj::FnNative(_) => "<native>()".to_string(),
-            Obj::FnBridge(_) => "<bridge>()".to_string(),
+            Obj::FnRust() =>    "<rust>".to_string(),
+            Obj::FnNative(_) => "<native>".to_string(),
+            Obj::FnBridge(_) => "<bridge>".to_string(),
             Obj::Nil() => String::from("nil"),     
         }
     }

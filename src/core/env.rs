@@ -15,12 +15,13 @@ use crate::lex::parser::{
     parse_src
 };
 
+use core::time;
 use std::{
     collections::HashMap,
     cell::RefCell,
     ops::Deref, 
     io::Write,
-    rc::Rc, 
+    rc::Rc, time::{Instant, Duration}, 
 };
 
 pub const MAIN: &str = "main";
@@ -161,6 +162,7 @@ impl Env {
 
         let mut res = Obj::Nil();
         let mut count: usize = 0;
+        let mut time = Duration::new(0, 0);
 
         loop {
             print!("[{}]>> ", count);
@@ -170,13 +172,20 @@ impl Env {
             let mut input = String::new();
             io::stdin().read_line(&mut input)?;
 
-            if input == "--quit" {
-                break;
+            match input.trim() {
+                "--quit" => break,
+                "--time" => {
+                    println!("completed in: {:?}", time);
+                    continue;
+                },
+                _ => ()
             }
 
             let body = parse_src(self, &String::from(PRELUDE), &input.trim().to_string())?;
 
+            let start = Instant::now();
             res = self.run(&body)?;
+            time = start.elapsed();
 
             println!("{}", res);
         }
