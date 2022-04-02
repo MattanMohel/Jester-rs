@@ -1,16 +1,19 @@
-use std::{ops::Deref, borrow::Borrow};
+use std::ops::Deref;
 
 use crate::core::{
     env::Env, 
-    objects::Obj, 
     err::JtsErr,
-    functions::FnNative, 
+    objects::Obj, 
 };
 
 impl Env {
     pub fn std_lib(&mut self) -> JtsErr {
+        // constant true value
         self.add_symbol("T", Obj::new_const(true))?;
+        // constant false value
         self.add_symbol("F", Obj::new_const(false))?;
+        // constant pi value
+        self.add_symbol("pi", Obj::new_const(3.1415926535))?;
 
         // (set target value)
         // sets target to a copy of value
@@ -65,6 +68,18 @@ impl Env {
                 res = node.progn(|obj| { env.eval(obj.deref()) })?;
             }
             Ok(res)
+        }))?;
+
+        // (if cond if-true if-false)
+        // executes 'if-true' if 'cond' is true, 'if-false' otherwise
+        self.add_symbol("if", Obj::new_bridge(|env, node| {
+            let cond = *env.eval(node.get(0)?.deref())?.is_bool()?;
+
+            if cond {
+                env.eval(node.get(1)?.deref())
+            } else {
+                env.eval(node.get(2)?.deref())
+            }
         }))?;
 
         Ok(())
