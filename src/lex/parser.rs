@@ -1,20 +1,25 @@
-use std::borrow::Borrow;
-
 use crate::core::{
     env::Env,
     objects::Obj,
     nodes::Node, 
 
     err::{
-        ErrType::*, 
+        JtsErrType::*, 
         AsResult, 
         JtsErr
     },
 };
 
 use super::{
-    lexer::{to_obj, to_toks},
-    tokens::{Tok, Spec},
+    lexer::{
+        to_obj, 
+        to_toks
+    },
+
+    tokens::{
+        Tok, 
+        Spec
+    },
 };
 
 /*

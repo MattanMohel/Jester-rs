@@ -6,7 +6,7 @@ use super::{
     
     err::{
         JtsErr,
-        ErrType::*,
+        JtsErrType::*,
     }, 
 };
 

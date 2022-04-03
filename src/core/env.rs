@@ -4,7 +4,7 @@ use super::{
     nodes::Node,
 
     err::{
-        ErrType::*, 
+        JtsErrType::*, 
         JtsErr, 
         AsResult
     },
@@ -28,14 +28,9 @@ pub const GEN_SYM: &str = "gensym";
 pub const PRELUDE: &str = "prelude";
 
 pub type Shared<T> = Rc<RefCell<T>>;
+
 pub fn new_shared<T>(v: T) -> Shared<T> {
     Rc::new(RefCell::new(v))
-}
-pub fn try_new_shared<T>(v: JtsErr<T>) -> JtsErr<Shared<T>> {
-    match v {
-        Ok(ok) => Ok(Rc::new(RefCell::new(ok))),
-        Err(err) => Err(err)
-    }
 }
 
 pub struct Env {

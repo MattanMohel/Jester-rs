@@ -4,7 +4,7 @@ use super::{
     nodes::Node,
 
     err::{
-        ErrType::*, 
+        JtsErrType::*, 
         AsResult,
         JtsErr
     }, 
@@ -12,7 +12,8 @@ use super::{
 
 use std::{
     collections::HashMap, 
-    ops::Deref, rc::Rc, cell::RefCell, 
+    ops::Deref, 
+    rc::Rc, 
 };
 
 pub struct Mod {

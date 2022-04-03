@@ -1,9 +1,13 @@
-use std::{ops::Deref, cell::RefCell, rc::Rc};
+use std::ops::Deref;
 
 use crate::core::{
-    env::{Env, new_shared}, 
     objects::Obj, 
     err::JtsErr,
+    
+    env::{
+        Env, 
+        new_shared
+    }, 
 };
 
 impl Env {

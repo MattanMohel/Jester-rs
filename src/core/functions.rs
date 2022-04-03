@@ -1,16 +1,14 @@
+use std::ops::Deref;
+
 use super::{
     env::Env, 
+    err::JtsErr,
     objects::Obj,
 
     nodes::{
         Node, 
         NodeIter
-    }, 
-    
-    err::{
-        JtsErr,
-        ErrType::*,
-    }
+    },  
 };
 
 pub type Bridge = fn(&Env, &mut NodeIter) -> JtsErr<Obj>;
@@ -29,16 +27,16 @@ impl FnBridge {
 
 #[derive(Clone, Default)]
 pub struct FnNative {
-    pub body:   Node,
-    //pub params: Node,
+    pub body: Node,
+    pub params: Node,
 }
 
 impl FnNative {
     #[inline]
     pub fn invoke(&self, env: &Env, args: &mut NodeIter) -> JtsErr<Obj> {
-        // apply args...
-        // exec body... 
-        println!("native call!");
-        Err(Todo)
+        self.params.into_iter().scope(args, || {
+            self.body.into_iter()
+                .progn(|obj| { env.eval(obj.deref()) })
+        })
     }
 }

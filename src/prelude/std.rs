@@ -4,6 +4,7 @@ use crate::core::{
     env::Env, 
     err::JtsErr,
     objects::Obj, 
+    functions::FnNative, 
 };
 
 impl Env {
@@ -13,7 +14,7 @@ impl Env {
         // constant false value
         self.add_symbol("F", Obj::new_const(false))?;
         // constant pi value
-        self.add_symbol("pi", Obj::new_const(3.1415926535))?;
+        self.add_symbol("pi", Obj::new_const::<f64>(3.1415926535))?;
 
         // (set target value)
         // sets target to a copy of value
@@ -21,6 +22,38 @@ impl Env {
             let res = env.eval(node.get(1)?.deref())?;
             node.get_mut(0)?.set(&res);
             Ok(res)
+        }))?;
+
+        // (defun symbol (args) body)
+        // sets target to a copy of value
+        self.add_symbol("defun", Obj::new_bridge(|_, node| {
+            let native = FnNative {
+                params: node.get(1)?.is_node()?.clone(),
+                body: node.into_node_from(2)
+            };
+
+            node.get_mut(0)?.set_to(native);
+            Ok(node.get(0)?.clone())
+        }))?;
+
+        // (let ( (args) ) body)
+        // creates a lexical scope and evaluates
+        // the body in respect to the new bindings
+        self.add_symbol("let", Obj::new_bridge(|env, node| {    
+            let elem = node.shift()?;
+            let shared = elem.borrow();
+            let params = shared.is_node()?.into_iter_from(0);
+
+            params.anonymous_scope(|| {
+                node.progn(|obj| { env.eval(obj.deref()) })
+            })
+        }))?;
+
+        // (do body)
+        // a progn which evaluates all its elements
+        // and returns the evaluation of its last
+        self.add_symbol("do", Obj::new_bridge(|env, node| {    
+            node.progn(|obj| { env.eval(obj.deref()) })
         }))?;
 
         // (= value cmpr)

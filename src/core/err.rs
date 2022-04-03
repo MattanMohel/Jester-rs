@@ -90,51 +90,74 @@ impl<T> AsResult<T> for Option<T> {
 /////Jester-Script Error Defines/////
 /////////////////////////////////////
 
-pub type JtsErr<T = ()> = Result<T, ErrType>;
+pub type JtsErr<T = ()> = Result<T, JtsErrType>;
 
 #[derive(Debug)]
-pub enum ErrType {
-    Todo,
-    // symbol does not exist
+pub enum JtsErrType {
+    /// asserts that a symbol cannot
+    /// be found in the given context
     MissingSymbol,
-    // symbol is a duplicate
+    /// asserts that a symbol is a 
+    /// duplicate, meaning its already
+    /// defined in the given context
     DuplicateSymbol,
-    // symbol is disallowed
+    /// asserts that a symbol is disallowed,
+    /// meaning that it conflicts with possible
+    /// internal symbols such as 'gensym'
     DisallowedSymbol,
-    // module does not exist
+    /// asserts that a module cannot
+    /// be found in the given context
     MissingModule,
-    // module is a duplicate
+    /// asserts that a module is already
+    /// defined in the environment
     DuplicateModule, 
-    // parentheses are unbalanced
+    /// asserts that an input's parentheses 
+    /// were unbalanced, meaning the ratio of 
+    /// right to left parentheses was non-equal
     UnbalancedParentheses,  
-    // generic IO errors
+    /// an Io error represented in Jts for
+    /// error modularity
     IoErr,
-    // Missing 'main' function
+    /// asserts that the prescribed entry 
+    /// module could not be found. Most usually
+    /// the entry module is 'main'
     NoEntry,
-    // types cannot match
+    /// asserts that a given pair of types
+    /// do not match and could not be operated
+    /// upon correctly in the given context
     MismatchedTypes,
-    // types cannot be compared
+    /// asserts that a given pair of types
+    /// could not be compared
     IncomparableTypes,
-    // Types cannot be cast
+    /// asserts that a given type could not
+    /// be cast into the other successfully 
     ErrCastTypes,
-    // assigning to const value
+    /// asserts that the program attempted to
+    /// mutate a constant value
     ConstAssign,
-    // tried executing a non-callable
+    /// asserts that the program attempted to 
+    /// invoke a non-callable value
     NonCallable,
-    // index out of bounds
+    /// asserts that the program attempted to 
+    /// query a value from outside the bounds
+    /// of a given collection
     OutOfBounds,
+    /// asserts that a given input parameter 
+    /// list to a function invocation could 
+    /// not match with the function signature
+    UnmatchedParamLists,
 }
 
-impl Error for ErrType {}
+impl Error for JtsErrType {}
 
-impl Display for ErrType {
+impl Display for JtsErrType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Toolchain Error!")
     }
 }
 
-impl From<io::Error> for ErrType {
-    fn from(cause: io::Error) -> Self {
+impl From<io::Error> for JtsErrType {
+    fn from(_: io::Error) -> Self {
         Self::IoErr
     }
 }
