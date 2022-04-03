@@ -15,7 +15,6 @@ use crate::lex::parser::{
     parse_src
 };
 
-use core::time;
 use std::{
     collections::HashMap,
     cell::RefCell,
@@ -29,6 +28,15 @@ pub const GEN_SYM: &str = "gensym";
 pub const PRELUDE: &str = "prelude";
 
 pub type Shared<T> = Rc<RefCell<T>>;
+pub fn new_shared<T>(v: T) -> Shared<T> {
+    Rc::new(RefCell::new(v))
+}
+pub fn try_new_shared<T>(v: JtsErr<T>) -> JtsErr<Shared<T>> {
+    match v {
+        Ok(ok) => Ok(Rc::new(RefCell::new(ok))),
+        Err(err) => Err(err)
+    }
+}
 
 pub struct Env {
     symbols: Vec<Shared<Obj>>,
@@ -67,7 +75,7 @@ impl Env {
     ///////////////////////////
     
     pub fn add_symbol_to(&mut self, mod_id: &String, symbol: &String, value: Obj) -> JtsErr {        
-        self.symbols.push(Rc::new(RefCell::new(value)));
+        self.symbols.push(new_shared(value));
      
         if *symbol == self.curr_unique_sym {
             self.gen_unique_symbol();
@@ -111,7 +119,7 @@ impl Env {
             module.add_import(&self.module(&String::from(PRELUDE))?)?;
         }
 
-        self.modules.insert(mod_id.clone(), Rc::new(RefCell::new(module)))   
+        self.modules.insert(mod_id.clone(), new_shared(module))   
             .as_result_rev((), DuplicateModule)
     }
 

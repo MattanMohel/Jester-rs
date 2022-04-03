@@ -1,6 +1,6 @@
 use super::{
     objects::Obj, 
-    env::Shared, 
+    env::{Shared, new_shared}, 
     nodes::Node,
 
     err::{
@@ -55,7 +55,7 @@ impl Mod {
     }
 
     pub fn add_body(&mut self, body: Node) {
-        self.body = Rc::new(RefCell::new(body));
+        self.body = new_shared(body);
     }
 
     pub fn symbol(&self, symbol: &String) -> Option<Shared<Obj>> {

@@ -70,6 +70,24 @@ impl Env {
             Ok(res)
         }))?;
 
+        // (lazy obj)
+        // returns a lazy 'obj'
+        self.add_symbol("lazy", Obj::new_bridge(|_, node| {
+            Ok(Obj::new_const(node.get_shared(0)?))
+        }))?;
+
+        // (eval obj)
+        // returns an evaluated 'obj'
+        //  - used to evaluate lazy expressions 
+        self.add_symbol("eval", Obj::new_bridge(|env, node| {
+            let res = env.eval(node.get(0)?.deref())?;
+
+            match &res {
+                Obj::Lazy(lazy) => Ok(env.eval(lazy.borrow().deref())?),
+                _ => Ok(res)
+            }
+        }))?;
+
         // (if cond if-true if-false)
         // executes 'if-true' if 'cond' is true, 'if-false' otherwise
         self.add_symbol("if", Obj::new_bridge(|env, node| {

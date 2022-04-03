@@ -53,13 +53,25 @@ impl TypeId for bool {
 
 impl TypeId for String {
     fn as_variant(self) -> Obj {
-        Obj::Str(self.clone())
+        Obj::Str(self)
     }
 }
 
 impl TypeId for FnNative {
     fn as_variant(self) -> Obj {
         Obj::FnNative(self)
+    }
+}
+
+impl TypeId for Node {
+    fn as_variant(self) -> Obj {
+        Obj::Node(self)
+    }
+}
+
+impl TypeId for Shared<Obj> {
+    fn as_variant(self) -> Obj {
+        Obj::Lazy(self)
     }
 }
 

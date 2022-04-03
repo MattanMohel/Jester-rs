@@ -1,9 +1,11 @@
-use std::ops::Deref;
+use std::{ops::Deref, cell::RefCell, rc::Rc};
+
+use crate::core::env::try_new_shared;
 
 use super::{
     objects::Obj, 
     nodes::Node,
-    env::Env, 
+    env::{Env, Shared}, 
     err::{
         JtsErr,
         ErrType::*,
@@ -19,10 +21,13 @@ impl Env {
                     Obj::FnNative(_) | 
                     Obj::FnRust() if !node.args.is_empty() => self.exec(node),
     
-                    _ => Ok(obj.clone())
+                    _ => { 
+                        let args = node.try_collect(|obj| { self.eval(obj.deref()) })?;
+                        Ok(Obj::new_const(args))
+                    }
                 }          
-            }      
-
+            }
+            
             _ => Ok(obj.clone())
         }
     }
