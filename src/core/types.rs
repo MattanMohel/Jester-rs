@@ -10,7 +10,7 @@ use super::{
     }, 
 };
 
-pub trait TypeId: Default {
+pub trait TypeId: Default + Clone {
     fn into_obj(self) -> Obj;
 }
 

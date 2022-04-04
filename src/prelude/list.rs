@@ -1,8 +1,13 @@
-use std::ops::Deref;
+use std::{ops::Deref, borrow::BorrowMut};
 
 use crate::core::{
     objects::Obj, 
-    err::JtsErr,
+
+    err::{
+        JtsErr, 
+        AsResult,
+        JtsErrType::*,
+    },
     
     env::{
         Env, 
@@ -22,6 +27,22 @@ impl Env {
                 .deref())?;
 
             Ok(res)
+        }))?;
+
+        // (replace index element list)
+        // sets the element at index to a new element
+        //  - returns the replaced element
+        self.add_symbol("replace", Obj::new_bridge(|env, node| {
+            let index = env.eval(node.get(0)?.deref())?.is_int()? as usize;
+            let elem = env.eval(node.get(1)?.deref())?;
+
+            let list = node.get_mut(2)?;
+            let list = list.is_node()?;
+
+            let replace = list.get(index)?.clone();
+            list.get_mut(index as usize)?.set(&elem);
+            
+            Ok(replace)
         }))?;
 
         // (append elem list)
@@ -51,6 +72,15 @@ impl Env {
             node.get_mut(2)?.is_node_mut()?.args.insert(index as usize, new_shared(elem.clone()));
             
             Ok(elem)
+        }))?;
+
+        // (remove index list)
+        // removes element from list at the gievn index
+        //  - pushes all elements to the left
+        //  - returns the removed element
+        self.add_symbol("remove", Obj::new_bridge(|env, node| {
+            let index = env.eval(node.get(0)?.deref())?.is_int()?;
+            node.get_mut(1)?.is_node_mut()?.remove(index as usize)
         }))?;
 
         Ok(())

@@ -54,6 +54,20 @@ impl<'a> IntoIterator for &'a Node {
 }
 
 impl Node {
+    pub fn len(&self) -> usize {
+        self.args.len()
+    }
+
+    pub fn remove(&mut self, i: usize) -> JtsErr<Obj> {
+        if i < self.len() {
+            let elem = self.args.remove(i);
+            let elem = elem.borrow();
+            Ok(elem.clone())
+        } else {
+            Err(OutOfBounds)
+        }
+    }
+
     pub fn get(&self, i: usize) -> JtsErr<Ref<'_, Obj>> {
         match self.args.get(i) {
             Some(obj) => Ok(obj.borrow()),
@@ -91,6 +105,10 @@ impl<'a> Iterator for NodeIter<'a> {
 }
 
 impl<'a> NodeIter<'a> {
+    pub fn len(&self) -> usize {
+        self.args.len()
+    }
+
     /// shifts the iterator offset by 1 and returns
     /// a non-owning reference to the previous index
     /// to bypass borrowing rules infringement 

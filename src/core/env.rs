@@ -146,6 +146,11 @@ impl Env {
     //////////////////
     /////Run-Time/////
     //////////////////
+    /// 
+    pub fn add_src(&mut self, src: &str) -> JtsErr<Obj> {
+        let body = parse_src(self, &String::from(PRELUDE), &String::from(src))?;
+        self.run(&body)
+    }
     
     pub fn run(&self, node: &Node) -> JtsErr<Obj> {
         node.into_iter()

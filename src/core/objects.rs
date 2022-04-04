@@ -5,8 +5,13 @@ use super:: {
     types::TypeId, 
 
     functions::{
+        FnStaticImpl,
+        TupleCast, 
         FnNative, 
-        FnBridge, Bridge
+        FnBridge, 
+        FnStatic, 
+        Bridge, 
+        Static, 
     }, 
 };
 
@@ -28,7 +33,7 @@ pub enum Obj {
     Str(String),
 
     // functions
-    FnRust(),
+    FnStatic(FnStatic),
     FnNative(FnNative),
     FnBridge(FnBridge),
 
@@ -57,6 +62,13 @@ impl Obj {
 
     pub fn new_bridge(bridge: Bridge) -> Obj {
         Obj::FnBridge(FnBridge { func: bridge })
+    }
+
+    pub fn new_static<A, R>(static_fn: Static<A, R>) -> Obj 
+        where A: 'static + TupleCast, R: 'static + TypeId 
+    {
+        let static_impl = FnStaticImpl::<A, R> { func: static_fn };
+        Obj::FnStatic(FnStatic { func: Box::new(static_impl) })
     }
 
     pub fn set(&mut self, other: &Obj) {
@@ -88,9 +100,10 @@ impl Obj {
                         format!("{} {}", acc, o.to_string())
                     }})),
 
-            Obj::FnRust() =>    "<rust>".to_string(),
+            Obj::FnStatic(_) => "<static>".to_string(),
             Obj::FnNative(_) => "<native>".to_string(),
             Obj::FnBridge(_) => "<bridge>".to_string(),
+            
             Obj::Nil() => String::from("nil"),     
         }
     }
