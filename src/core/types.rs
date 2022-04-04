@@ -11,77 +11,92 @@ use super::{
 };
 
 pub trait TypeId: Default {
-    fn as_variant(self) -> Obj;
+    fn into_obj(self) -> Obj;
 }
 
 impl TypeId for u32 {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::U32(self)
     }
 }
 impl TypeId for u64 {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::U64(self)
     }
 }
 impl TypeId for i32 {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::I32(self)
     }
 }
 impl TypeId for i64 {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::I64(self)
     }
 }
 impl TypeId for f32 {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::F32(self)
     }
 }
 impl TypeId for f64 {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::F64(self)
     }
 }
 
 impl TypeId for bool {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::Bool(self)
     }
 }
 
 impl TypeId for String {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::Str(self)
     }
 }
 
 impl TypeId for FnNative {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::FnNative(self)
     }
 }
 
 impl TypeId for Node {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::Node(self)
     }
 }
 
 impl TypeId for Shared<Obj> {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::Lazy(self)
     }
 }
 
 impl TypeId for () {
-    fn as_variant(self) -> Obj {
+    fn into_obj(self) -> Obj {
         Obj::Nil()
     }
 }
 
 impl Obj {
+    /// coerces object into type T
+    pub unsafe fn cast_as<T: TypeId>(&self) -> JtsErr<T> {
+        match TypeId::into_obj(T::default()) {
+            Obj::U32(_) => Ok(std::mem::transmute_copy::<u32, T>(&self.as_u32()?)),
+            Obj::U64(_) => Ok(std::mem::transmute_copy::<u64, T>(&self.as_u64()?)),
+            Obj::I32(_) => Ok(std::mem::transmute_copy::<i32, T>(&self.as_i32()?)),
+            Obj::I64(_) => Ok(std::mem::transmute_copy::<i64, T>(&self.as_i64()?)),
+            Obj::F32(_) => Ok(std::mem::transmute_copy::<f32, T>(&self.as_f32()?)),
+            Obj::F64(_) => Ok(std::mem::transmute_copy::<f64, T>(&self.as_f64()?)),
+            Obj::Str(_) => Ok(std::mem::transmute_copy::<String, T>(self.is_str()?)),
+            Obj::Bool(_) => Ok(std::mem::transmute_copy::<bool, T>(self.is_bool()?)),
+            _ => Err(ErrCastTypes)
+        }
+    }
+
     pub fn is_num(&self) -> JtsErr<f64> {
         match self {
             Obj::U32(x) => Ok(*x as f64),

@@ -52,11 +52,11 @@ impl Default for Obj {
 
 impl Obj {
     pub fn new_const<T: TypeId>(val: T) -> Obj {
-        val.as_variant()
+        val.into_obj()
     }
 
     pub fn new_bridge(bridge: Bridge) -> Obj {
-        Obj::FnBridge(FnBridge { bridge: bridge })
+        Obj::FnBridge(FnBridge { func: bridge })
     }
 
     pub fn set(&mut self, other: &Obj) {
@@ -64,7 +64,7 @@ impl Obj {
     }
 
     pub fn set_to<T: TypeId>(&mut self, other: T) {
-        *self = other.as_variant();
+        *self = other.into_obj();
     } 
     
     pub fn to_string(&self) -> String {

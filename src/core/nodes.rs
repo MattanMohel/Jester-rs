@@ -11,8 +11,9 @@ use super::{
     objects::Obj,
 
     env::{
+        Env,
         Shared,
-        new_shared
+        new_shared, 
     }, 
     
     err::{
@@ -135,7 +136,7 @@ impl<'a> NodeIter<'a> {
     /// ```
     /// offset + from
     /// ``` 
-    /// to the end of the range
+    /// to the end of its range
     pub fn into_node_from(&self, from: usize) -> Node {
         Node { 
             args: self.args[self.offset + from..].iter()
@@ -168,27 +169,27 @@ impl<'a> NodeIter<'a> {
     /// - evaluate (+ a b) => (+ 1 2)
     /// - return 3 and reset a = nil and b = nil
 
-    pub fn scope<F>(&self, args: &mut NodeIter, mut f: F) -> JtsErr<Obj>
+    pub fn scope<F>(&self, env: &Env, args: &mut NodeIter, mut f: F) -> JtsErr<Obj>
         where F: FnMut() -> JtsErr<Obj> 
     {
         // assert matching lengths of params and args
         (self.args.len() != args.args.len()).into_result(UnmatchedParamLists)?;
 
         // store previous argument values
-        let prev = self.try_collect(|obj| { Ok(obj.clone()) })?;
+        let prev = self.try_collect(|obj| { env.eval(obj.deref()) })?;
 
         // apply passed argument values
-        self.args.iter().zip(args)
-            .for_each(|(obj, arg)| { obj.borrow_mut().set(arg.deref()) });
+        for (obj, arg) in self.args.iter().zip(args) {
+            obj.borrow_mut().set(&env.eval(arg.deref())?);
+        }
 
-        // Do some action prescribed by closure
         let res = f();
 
         // reset argument values to previous
-        self.args.iter().zip(prev.into_iter())
-            .for_each(|(obj, arg)| { obj.borrow_mut().set(arg.deref()) });
+        for (obj, prev) in self.args.iter().zip(prev.into_iter()) {
+            obj.borrow_mut().set(prev.deref());
+        }
 
-        // return execution
         res
     }
 
@@ -231,7 +232,6 @@ impl<'a> NodeIter<'a> {
             }    
         }
 
-        // Do some action prescribed by closure
         let res = f();
 
         // reset argument values to previous
@@ -242,7 +242,6 @@ impl<'a> NodeIter<'a> {
             }    
         }
 
-        // return execution
         res
     }
 
@@ -279,7 +278,7 @@ impl<'a> NodeIter<'a> {
     /// ever found, the collection ends and the error
     /// propogated
     pub fn try_collect<F>(&self, mut f: F) -> JtsErr<Node> 
-    where F: FnMut(Ref<'_, Obj>) -> JtsErr<Obj>
+        where F: FnMut(Ref<'_, Obj>) -> JtsErr<Obj>
     {
         let mut err = Ok(());
         let args = self.scan(&mut err, |e, obj| {

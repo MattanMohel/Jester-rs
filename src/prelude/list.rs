@@ -12,7 +12,6 @@ use crate::core::{
 
 impl Env {
     pub fn list_lib(&mut self) -> JtsErr {
-
         // (nth index list)
         // returns the nth element of a given list
         self.add_symbol("nth", Obj::new_bridge(|env, node| {
