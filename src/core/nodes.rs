@@ -191,21 +191,25 @@ impl<'a> NodeIter<'a> {
         where F: FnMut() -> JtsErr<Obj> 
     {
         // assert matching lengths of params and args
-        (self.args.len() != args.args.len()).into_result(UnmatchedParamLists)?;
+        (self.len() != args.len()).into_result(UnmatchedParamLists)?;
 
         // store previous argument values
         let prev = self.try_collect(|obj| { env.eval(obj.deref()) })?;
 
         // apply passed argument values
-        for (obj, arg) in self.args.iter().zip(args) {
-            obj.borrow_mut().set(&env.eval(arg.deref())?);
+        for i in 0..self.len() {
+            // store evaluation and set to prevent
+            // borrow issues where the evaluations
+            // needs to borrow a mutably borrowed value
+            let res = env.eval(args.get(i)?.deref())?;
+            self.get_mut(i)?.set(&res);
         }
 
         let res = f();
 
         // reset argument values to previous
-        for (obj, prev) in self.args.iter().zip(prev.into_iter()) {
-            obj.borrow_mut().set(prev.deref());
+        for i in 0..self.len() {
+            self.get_mut(i)?.set(prev.get(i)?.deref());
         }
 
         res

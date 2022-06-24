@@ -1,13 +1,8 @@
 use std::{ops::Deref, borrow::BorrowMut};
 
 use crate::core::{
-    objects::Obj, 
-
-    err::{
-        JtsErr, 
-        AsResult,
-        JtsErrType::*,
-    },
+    objects::Obj,
+    err::JtsErr,
     
     env::{
         Env, 
@@ -75,12 +70,19 @@ impl Env {
         }))?;
 
         // (remove index list)
-        // removes element from list at the gievn index
+        // removes element from list at the given index
         //  - pushes all elements to the left
         //  - returns the removed element
         self.add_symbol("remove", Obj::new_bridge(|env, node| {
             let index = env.eval(node.get(0)?.deref())?.is_int()?;
             node.get_mut(1)?.is_node_mut()?.remove(index as usize)
+        }))?;
+
+        // (len list)
+        // returns the length of a list
+        self.add_symbol("len", Obj::new_bridge(|env, node| {
+            let len = env.eval(node.get(0)?.deref())?.is_node()?.len();
+            Ok(Obj::new_const(len as u64))
         }))?;
 
         Ok(())

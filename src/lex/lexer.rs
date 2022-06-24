@@ -6,8 +6,8 @@ const ESCAPERS:  [char; 6] = [' ', ';', '\n', '\t', '\0', '\"'];
 const OPERATORS: [char; 4] = ['(', ')', '\'', '~']; 
 
 fn is_escaper(ch: char) -> bool {
-    for c in ESCAPERS {
-        if ch == c {
+    for c in ESCAPERS.iter() {
+        if ch == *c {
             return true
         }
     }
@@ -16,8 +16,8 @@ fn is_escaper(ch: char) -> bool {
 }
 
 fn is_operater(ch: char) -> bool {
-    for c in OPERATORS {
-        if ch == c {
+    for c in OPERATORS.iter() {
+        if ch == *c {
             return true
         }
     }

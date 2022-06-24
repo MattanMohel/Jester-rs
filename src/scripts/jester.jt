@@ -1,5 +1,17 @@
 
-(defun fac (n)
-    (if (= n 0)
-        1
-        (* n (fac (- n 1)))))
+(defun factorize (n)
+	(let
+		( (fact  1)
+		  (res () ) )
+		
+		(loop (> n 1)
+			(set fact (+ 1 fact))
+			(when (= (mod n fact) 0)	
+				(do 
+					(append fact res)
+					(/= n fact)
+					(set fact 1))))
+		
+		; return the list of factors 'res'
+		
+		res))

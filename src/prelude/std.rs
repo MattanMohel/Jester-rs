@@ -123,6 +123,17 @@ impl Env {
 
         // (if cond if-true if-false)
         // executes 'if-true' if 'cond' is true, 'if-false' otherwise
+        self.add_symbol("match", Obj::new_bridge(|env, node| {
+            let cond = *env.eval(node.get(0)?.deref())?.is_bool()?;
+            if cond {
+                env.eval(node.get(1)?.deref())
+            } else {
+                env.eval(node.get(2)?.deref())
+            }
+        }))?;
+
+        // (if cond if-true if-false)
+        // executes 'if-true' if 'cond' is true, 'if-false' otherwise
         self.add_symbol("if", Obj::new_bridge(|env, node| {
             let cond = *env.eval(node.get(0)?.deref())?.is_bool()?;
             if cond {
