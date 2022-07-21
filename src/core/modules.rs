@@ -71,6 +71,16 @@ impl Mod {
         }
     }
 
+    pub fn symbol_id(&self, obj: &Shared<Obj>) -> Option<String> {
+        for key in &self.symbols {
+            if obj.deref().as_ptr() == key.1.as_ptr() {
+                return Some(key.0.clone())
+            }     
+        }
+
+        None
+    }
+
     pub fn body(&self) -> Shared<Node> {
         self.body.clone()
     }

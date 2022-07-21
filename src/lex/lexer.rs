@@ -68,9 +68,9 @@ pub fn to_toks(src: &String) -> Vec<Tok> {
     let mut toks = Vec::new();
     
     // line count
-    let mut line  = 0usize;
+    let mut line: usize  = 0;
     // parenthesis depth
-    let mut depth = 0isize;
+    let mut depth: isize = 0;
     // in string literal
     let mut str = false;
 

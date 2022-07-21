@@ -1,7 +1,12 @@
 
 use super:: {
     nodes::Node,
-    env::Shared,
+
+    env::{
+        Shared, 
+        Env
+    },
+    
     types::TypeId, 
 
     functions::{
@@ -14,8 +19,6 @@ use super:: {
         Static, 
     }, 
 };
-
-use std::fmt;
 
 #[derive(Clone)]
 pub enum Obj {
@@ -41,12 +44,6 @@ pub enum Obj {
     Lazy(Shared<Obj>),
 
     Nil(),
-}
-
-impl fmt::Display for Obj {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
-    }
 }
 
 impl Default for Obj {
@@ -79,7 +76,7 @@ impl Obj {
         *self = other.into_obj();
     } 
     
-    pub fn to_string(&self) -> String {
+    pub fn to_string(&self, env: &Env) -> String {
         match self {
             Obj::F32(x) => x.to_string(),
             Obj::F64(x) => x.to_string(),
@@ -90,14 +87,17 @@ impl Obj {
             Obj::Str(x) => x.clone(),
             Obj::Bool(x) => x.to_string(),
 
-            Obj::Lazy(x) => x.borrow().to_string(),
+            Obj::Lazy(x) => match env.symbol_id(x) {
+                Some(sym) => sym,
+                None => String::from("unknown-symbol")
+            },
 
             Obj::Node(node) => format!("({})", node.into_iter()
                 .fold(String::new(), |acc, o| {
                     if acc.is_empty() {
-                        format!("{}", o.to_string())
+                        format!("{}", o.to_string(env))
                     } else {
-                        format!("{} {}", acc, o.to_string())
+                        format!("{} {}", acc, o.to_string(env))
                     }})),
 
             Obj::FnStatic(_) => "<static>".to_string(),

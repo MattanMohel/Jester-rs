@@ -139,6 +139,10 @@ impl Env {
             .into_result(MissingSymbol)
     }
 
+    pub fn symbol_id(&self, obj: &Shared<Obj>) -> Option<String> {
+        self.modules.values().find_map(|module| { module.borrow().symbol_id(obj) })
+    }
+
     pub fn main(&self) -> JtsErr<Shared<Node>> {
         Ok(self.module(&String::from(MAIN))?.deref().borrow().body())
     }
@@ -181,7 +185,13 @@ impl Env {
             io::stdin().read_line(&mut input)?;
 
             match input.trim() {
-                "--quit" => break,
+                "--help" => {
+
+                }
+                "--quit" => {
+                    println!("quit REPL");
+                    break;
+                },
                 "--time" => {
                     println!("completed in: {:?}", time);
                     continue;
@@ -195,7 +205,7 @@ impl Env {
             res = self.run(&body)?;
             time = start.elapsed();
 
-            println!("{}", res);
+            println!("{}", res.to_string(self));
         }
 
         Ok(res)

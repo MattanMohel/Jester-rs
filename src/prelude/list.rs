@@ -1,4 +1,4 @@
-use std::{ops::Deref, borrow::BorrowMut};
+use std::ops::Deref;
 
 use crate::core::{
     objects::Obj,

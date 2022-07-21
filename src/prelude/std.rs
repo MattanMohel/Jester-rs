@@ -103,15 +103,15 @@ impl Env {
             Ok(res)
         }))?;
 
-        // (lazy obj)
-        // returns a lazy 'obj'
-        self.add_symbol("lazy", Obj::new_bridge(|_, node| {
+        // (quote obj)
+        // returns a quoted 'obj'
+        self.add_symbol("quote", Obj::new_bridge(|_, node| {
             Ok(Obj::new_const(node.get_shared(0)?))
         }))?;
 
         // (eval obj)
         // returns an evaluated 'obj'
-        //  - used to evaluate lazy expressions 
+        //  - used to evaluate quote expressions 
         self.add_symbol("eval", Obj::new_bridge(|env, node| {
             let res = env.eval(node.get(0)?.deref())?;
 
