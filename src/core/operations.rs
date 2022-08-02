@@ -17,7 +17,7 @@ impl Obj {
             I64(x) => *x += other.as_i64()?,
             F32(x) => *x += other.as_f32()?,
             F64(x) => *x += other.as_f64()?,
-            _ => return Err(MismatchedTypes),
+            _ => return Err(MismatchedType),
         }
 
         Ok(())
@@ -31,7 +31,7 @@ impl Obj {
             I64(x) => *x -= other.as_i64()?,
             F32(x) => *x -= other.as_f32()?,
             F64(x) => *x -= other.as_f64()?,
-            _ => return Err(MismatchedTypes),
+            _ => return Err(MismatchedType),
         }
 
         Ok(())
@@ -45,7 +45,7 @@ impl Obj {
             I64(x) => *x *= other.as_i64()?,
             F32(x) => *x *= other.as_f32()?,
             F64(x) => *x *= other.as_f64()?,
-            _ => return Err(MismatchedTypes),
+            _ => return Err(MismatchedType),
         }
 
         Ok(())
@@ -59,7 +59,7 @@ impl Obj {
             I64(x) => *x /= other.as_i64()?,
             F32(x) => *x /= other.as_f32()?,
             F64(x) => *x /= other.as_f64()?,
-            _ => return Err(MismatchedTypes),
+            _ => return Err(MismatchedType),
         }
 
         Ok(())
@@ -73,7 +73,7 @@ impl Obj {
             I64(x) => *x %= other.as_i64()?,
             F32(x) => *x %= other.as_f32()?,
             F64(x) => *x %= other.as_f64()?,
-            _ => return Err(MismatchedTypes),
+            _ => return Err(MismatchedType),
         }
 
         Ok(())
@@ -89,7 +89,7 @@ impl Obj {
                     (Ok(n1), Ok(n2)) => {
                         Ok(n1 == n2)
                     }
-                    _ => Err(IncomparableTypes)
+                    _ => Err(UncomparableType)
                 }
             }
         }
@@ -98,14 +98,14 @@ impl Obj {
     pub fn le(&self, other: &Obj) -> JtsErr<bool> {
         match (self.is_num(), other.is_num()) {
             (Ok(n1), Ok(n2)) => Ok(n1 < n2),
-            _ => Err(IncomparableTypes)
+            _ => Err(UncomparableType)
         }
     }
 
     pub fn le_eq(&self, other: &Obj) -> JtsErr<bool> {
         match (self.is_num(), other.is_num()) {
             (Ok(n1), Ok(n2)) => Ok(n1 <= n2),
-            _ => Err(IncomparableTypes)
+            _ => Err(UncomparableType)
         }
     }
 }

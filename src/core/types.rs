@@ -1,13 +1,17 @@
+use std::ops::Deref;
+
 use super::{
     nodes::Node,
     env::Shared,
     objects::Obj, 
-    functions::FnNative, 
+    functions::{FnNative, FnMacro}, 
     
     err::{
         JtsErr,
         JtsErrType::*,
     }, 
+
+    env::new_shared
 };
 
 pub trait TypeId: Default + Clone {
@@ -63,15 +67,30 @@ impl TypeId for FnNative {
     }
 }
 
+impl TypeId for FnMacro {
+    fn into_obj(self) -> Obj {
+        Obj::FnMacro(self)
+    }
+}
+
 impl TypeId for Node {
     fn into_obj(self) -> Obj {
-        Obj::Node(self)
+        Obj::List(self)
     }
 }
 
 impl TypeId for Shared<Obj> {
     fn into_obj(self) -> Obj {
-        Obj::Lazy(self)
+        if let Obj::List(node) = self.borrow().deref() {
+            let args = node.args.iter().map(|arg| { 
+                    new_shared(arg.clone().into_obj()) 
+                })
+                .collect();
+            
+            return Obj::List(Node { args: args });
+        }
+
+        Obj::Quote(self)
     }
 }
 
@@ -93,7 +112,7 @@ impl Obj {
             Obj::F64(_) => Ok(std::mem::transmute_copy::<f64, T>(&self.as_f64()?)),
             Obj::Str(_) => Ok(std::mem::transmute_copy::<String, T>(self.is_str()?)),
             Obj::Bool(_) => Ok(std::mem::transmute_copy::<bool, T>(self.is_bool()?)),
-            _ => Err(ErrCastTypes)
+            _ => Err(ErrCastType)
         }
     }
 
@@ -105,7 +124,7 @@ impl Obj {
             Obj::I64(x) => Ok(*x as f64),
             Obj::F32(x) => Ok(*x as f64),
             Obj::F64(x) => Ok(*x as f64),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     } 
 
@@ -115,147 +134,147 @@ impl Obj {
             Obj::U64(x) => Ok(*x as u64),
             Obj::I32(x) => Ok(*x as u64),
             Obj::I64(x) => Ok(*x as u64),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     } 
 
     pub fn is_u32(&self) -> JtsErr<&u32> {
         match self {
             Obj::U32(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
  
     pub fn is_u32_mut(&mut self) -> JtsErr<&mut u32> {
         match self {
             Obj::U32(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_u64(&self) -> JtsErr<&u64> {
         match self {
             Obj::U64(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_u64_mut(&mut self) -> JtsErr<&mut u64> {
         match self {
             Obj::U64(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_i32(&self) -> JtsErr<&i32> {
         match self {
             Obj::I32(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_i32_mut(&mut self) -> JtsErr<&mut i32> {
         match self {
             Obj::I32(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_i64(&self) -> JtsErr<&i64> {
         match self {
             Obj::I64(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_i64_mut(&mut self) -> JtsErr<&mut i64> {
         match self {
             Obj::I64(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_f32(&self) -> JtsErr<&f32> {
         match self {
             Obj::F32(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_f32_mut(&mut self) -> JtsErr<&mut f32> {
         match self {
             Obj::F32(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_f64(&self) -> JtsErr<&f64> {
         match self {
             Obj::F64(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_f64_mut(&mut self) -> JtsErr<&mut f64> {
         match self {
             Obj::F64(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_bool(&self) -> JtsErr<&bool> {
         match self {
             Obj::Bool(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_bool_mut(&mut self) -> JtsErr<&mut bool> {
         match self {
             Obj::Bool(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_str(&self) -> JtsErr<&String> {
         match self {
             Obj::Str(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_str_mut(&mut self) -> JtsErr<&mut String> {
         match self {
             Obj::Str(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_node(&self) -> JtsErr<&Node> {
         match self {
-            Obj::Node(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            Obj::List(x) => Ok(x),
+            _ => Err(MismatchedType)
         }
     }
 
     pub fn is_node_mut(&mut self) -> JtsErr<&mut Node> {
         match self {
-            Obj::Node(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            Obj::List(x) => Ok(x),
+            _ => Err(MismatchedType)
         }
     }
 
-    pub fn is_lazy(&self) -> JtsErr<&Shared<Obj>> {
+    pub fn is_quote(&self) -> JtsErr<&Shared<Obj>> {
         match self {
-            Obj::Lazy(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            Obj::Quote(x) => Ok(x),
+            _ => Err(MismatchedType)
         }
     }
 
-    pub fn is_lazy_mut(&mut self) -> JtsErr<&mut Shared<Obj>> {
+    pub fn is_quote_mut(&mut self) -> JtsErr<&mut Shared<Obj>> {
         match self {
-            Obj::Lazy(x) => Ok(x),
-            _ => Err(MismatchedTypes)
+            Obj::Quote(x) => Ok(x),
+            _ => Err(MismatchedType)
         }
     }
 
@@ -267,7 +286,7 @@ impl Obj {
             Obj::I64(x) => Ok(x as u32),
             Obj::F32(x) => Ok(x as u32),
             Obj::F64(x) => Ok(x as u32),
-            _ => Err(ErrCastTypes),
+            _ => Err(ErrCastType),
         }
     }
 
@@ -279,7 +298,7 @@ impl Obj {
             Obj::I64(x) => Ok(x as u64),
             Obj::F32(x) => Ok(x as u64),
             Obj::F64(x) => Ok(x as u64),
-            _ => Err(ErrCastTypes),
+            _ => Err(ErrCastType),
         }
     }
 
@@ -291,7 +310,7 @@ impl Obj {
             Obj::I64(x) => Ok(x as i32),
             Obj::F32(x) => Ok(x as i32),
             Obj::F64(x) => Ok(x as i32),
-            _ => Err(ErrCastTypes),
+            _ => Err(ErrCastType),
         }
     }
 
@@ -303,7 +322,7 @@ impl Obj {
             Obj::I64(x) => Ok(x as i64),
             Obj::F32(x) => Ok(x as i64),
             Obj::F64(x) => Ok(x as i64),
-            _ => Err(ErrCastTypes),
+            _ => Err(ErrCastType),
         }
     }
 
@@ -315,7 +334,7 @@ impl Obj {
             Obj::I64(x) => Ok(x as f32),
             Obj::F32(x) => Ok(x as f32),
             Obj::F64(x) => Ok(x as f32),
-            _ => Err(ErrCastTypes),
+            _ => Err(ErrCastType),
         }
     }
 
@@ -327,7 +346,7 @@ impl Obj {
             Obj::I64(x) => Ok(x as f64),
             Obj::F32(x) => Ok(x as f64),
             Obj::F64(x) => Ok(x as f64),
-            _ => Err(ErrCastTypes),
+            _ => Err(ErrCastType),
         }
     }
 }

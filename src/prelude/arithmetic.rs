@@ -11,7 +11,7 @@ impl Env {
         // (+ body)
         // calculates the sum of all the elements of body
         self.add_symbol("+", Obj::new_bridge(|env, node| {
-            let mut fst = node.get(0)?.clone();
+            let mut fst = env.eval(&node.get(0)?.deref())?;
             node.shift()?;
 
             for rst in node {
@@ -23,7 +23,7 @@ impl Env {
         // (- body)
         // calculates the difference of all the elements of body
         self.add_symbol("-", Obj::new_bridge(|env, node| {
-            let mut fst = node.get(0)?.clone();
+            let mut fst = env.eval(&node.get(0)?.deref())?;
             node.shift()?;
 
             for rst in node {
@@ -35,7 +35,7 @@ impl Env {
         // (* body)
         // calculates the product of all the elements of body
         self.add_symbol("*", Obj::new_bridge(|env, node| {
-            let mut fst = node.get(0)?.clone();
+            let mut fst = env.eval(&node.get(0)?.deref())?;
             node.shift()?;
 
             for rst in node {
@@ -48,7 +48,7 @@ impl Env {
         // (/ body)
         // calculates the quotient of all the elements of body
         self.add_symbol("/", Obj::new_bridge(|env, node| {
-            let mut fst = node.get(0)?.clone();
+            let mut fst = env.eval(&node.get(0)?.deref())?;
             node.shift()?;
 
             for rst in node {
@@ -60,7 +60,7 @@ impl Env {
         // (+ body)
         // calculates the modulos of all the elements of body
         self.add_symbol("%", Obj::new_bridge(|env, node| {
-            let mut fst = node.get(0)?.clone();
+            let mut fst = env.eval(&node.get(0)?.deref())?;
             node.shift()?;
 
             for rst in node {

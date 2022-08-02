@@ -1,30 +1,26 @@
 use std::ops::Deref;
 
 use super::{
+    functions::Callable,
     objects::Obj, 
     nodes::Node,
+    err::JtsErr,
     env::Env, 
-
-    functions::Callable,
-    
-    err::{
-        JtsErr,
-        JtsErrType::*,
-    }, 
 };
 
 impl Env {
     pub fn eval(&self, obj: &Obj) -> JtsErr<Obj> {
         match obj {
-            Obj::Node(node) if !node.is_empty() => {
+            Obj::List(node) if !node.is_empty() => {
                 match node.get(0)?.deref() {
                     Obj::FnBridge(_) | 
                     Obj::FnNative(_) | 
-                    Obj::FnStatic(_) if !node.args.is_empty() => self.exec(node),
+                    Obj::FnStatic(_) |
+                    Obj::FnMacro(_) => self.exec(node),
     
                     _ => { 
-                        let args = node.into_iter().try_collect(|obj| { self.eval(obj.deref()) })?;
-                        Ok(Obj::new_const(args))
+                        let res = node.into_iter().try_map_collect(|obj| self.eval(obj.deref()))?;
+                        Ok(Obj::new_const(res))
                     }
                 }          
             }
@@ -39,7 +35,8 @@ impl Env {
             Obj::FnBridge(ref bridge_fn) => bridge_fn.invoke(self, &mut node.into_iter_from(1)),
             Obj::FnNative(ref native_fn) => native_fn.invoke(self, &mut node.into_iter_from(1)),
             Obj::FnStatic(ref static_fn) => static_fn.invoke(self, &mut node.into_iter_from(1)),
-            _ => Err(NonCallable)
+            Obj::FnMacro(ref macro_fn) => macro_fn.invoke(self, &mut node.into_iter_from(1)),
+            _ => unreachable!()
         } 
     }
 }

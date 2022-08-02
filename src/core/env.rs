@@ -7,24 +7,22 @@ use super::{
         JtsErrType::*, 
         JtsErr, 
         AsResult
-    },
+    }, 
+    
+    repl::Repl,
 };
 
-use crate::lex::parser::{
-    parse_file, 
-    parse_src
-};
+use crate::lex::parser::Parser;
 
 use std::{
     collections::HashMap,
     cell::RefCell,
     ops::Deref, 
-    io::Write,
-    rc::Rc, time::{Instant, Duration}, 
+    rc::Rc, 
 };
 
 pub const MAIN: &str = "main";
-pub const GEN_SYM: &str = "gensym";
+pub const GEN_SYM: &str = "GEN";
 pub const PRELUDE: &str = "prelude";
 
 pub type Shared<T> = Rc<RefCell<T>>;
@@ -69,7 +67,11 @@ impl Env {
     /////Symbols & Objects/////
     ///////////////////////////
     
-    pub fn add_symbol_to(&mut self, mod_id: &String, symbol: &String, value: Obj) -> JtsErr {        
+    pub fn add_symbol(&mut self, symbol: &str, value: Obj) -> JtsErr<Shared<Obj>> {        
+        self.add_symbol_to(&String::from(PRELUDE), &String::from(symbol), value)
+    }
+    
+    pub fn add_symbol_to(&mut self, mod_id: &String, symbol: &String, value: Obj) -> JtsErr<Shared<Obj>> {        
         self.symbols.push(new_shared(value));
      
         if *symbol == self.curr_unique_sym {
@@ -84,22 +86,37 @@ impl Env {
             .add_symbol(symbol, self.symbols.last().unwrap())
     }
 
-    pub fn add_symbol(&mut self, symbol: &str, value: Obj) -> JtsErr {        
-        self.add_symbol_to(&String::from(PRELUDE), &String::from(symbol), value)?;
-        Ok(())
-    }
-
     fn gen_unique_symbol(&mut self) {
         self.gen_sym += 1;
-        self.curr_unique_sym = format!("__{}-{}__", GEN_SYM, self.gen_sym - 1);
+        self.curr_unique_sym = format!("{}#{}", GEN_SYM, self.gen_sym - 1);
     }
 
     pub fn is_unique_symbol_form(symbol: &String) -> bool {
-        symbol.find(GEN_SYM).is_some()
+        symbol.find(GEN_SYM).is_some() &&
+        symbol[GEN_SYM.len() + 1..].parse::<usize>().is_ok()
     }
 
     pub fn unique_symbol(&self) -> String {
         self.curr_unique_sym.clone()
+    }
+    
+    pub unsafe fn generate_symbol(&self, value: Obj) -> JtsErr<Shared<Obj>> {      
+        let ptr = (self as *const Self) as *mut Self;
+            
+        match ptr.as_mut() {
+            Some(mut_self) => {
+                let symbol = self.unique_symbol();
+                mut_self.gen_unique_symbol();
+
+                mut_self.symbols.push(new_shared(value));
+     
+                mut_self.modules.get(&PRELUDE.to_string()).into_result(MissingModule)?
+                    .deref()
+                    .borrow_mut()
+                    .add_symbol(&symbol, self.symbols.last().unwrap())
+            },
+            None => Err(UninitEnv)
+        } 
     }
 
     /////////////////
@@ -123,7 +140,7 @@ impl Env {
             self.add_module(mod_id, true)?; 
         }
 
-        let body = parse_file(self, mod_id, path)?;
+        let body = Parser::from_file(path)?.parse_tokens(self, mod_id)?;
         self.module(mod_id)?.borrow_mut().add_body(body);
 
         Ok(())
@@ -152,7 +169,7 @@ impl Env {
     //////////////////
     /// 
     pub fn add_src(&mut self, src: &str) -> JtsErr<Obj> {
-        let body = parse_src(self, &String::from(PRELUDE), &String::from(src))?;
+        let body = Parser::from_string(&String::from(src))?.parse_tokens(self, &String::from(PRELUDE))?;
         self.run(&body)
     }
     
@@ -170,44 +187,7 @@ impl Env {
     }
 
     pub fn run_repl(&mut self) -> JtsErr<Obj> {
-        use std::io;
-
-        let mut res = Obj::Nil();
-        let mut count: usize = 0;
-        let mut time = Duration::new(0, 0);
-
-        loop {
-            print!("[{}]>> ", count);
-            io::stdout().flush()?;
-            count += 1;
-
-            let mut input = String::new();
-            io::stdin().read_line(&mut input)?;
-
-            match input.trim() {
-                "--help" => {
-
-                }
-                "--quit" => {
-                    println!("quit REPL");
-                    break;
-                },
-                "--time" => {
-                    println!("completed in: {:?}", time);
-                    continue;
-                },
-                _ => ()
-            }
-
-            let body = parse_src(self, &String::from(PRELUDE), &input.trim().to_string())?;
-
-            let start = Instant::now();
-            res = self.run(&body)?;
-            time = start.elapsed();
-
-            println!("{}", res.to_string(self));
-        }
-
-        Ok(res)
+        let mut repl = Repl::new();
+        repl.run(self)
     }
 }

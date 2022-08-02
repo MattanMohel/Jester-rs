@@ -20,45 +20,34 @@ fn main() -> JtsErr {
     env.add_symbol("add-rs", Obj::new_static(add))?;
 
     // adding direct source
-    env.add_src(
-        "(defun apply (f args)
-            (let 
-                (( a args ))
-                
-                (prepend f a)
-                a))
-
-        (defun fac (n)
-            (if (= n 0)
-                1
-                (* n (fac (- n 1)))))
-
-        (defun range (n)
-            (set i 0)
-            (set lst ())
-            
-            (loop (< i n)
-                (append i lst)
-                (set i (+ i 1)))
-            lst)
-
-        (defun factorize (n)
-            (set i 2)
-            (set acc ())
-
-            (loop (> n 1)
-                (if (= (% n i) 0)
-                    (do
-                        (set n (/ n i))
-                        (append i acc)
-                        (set i 2))
-                    nil)
-                (set i (+ i 1)))
-
-                acc)"
-    )?;
+    // env.add_src(
+    //     "
+    //     (macro for (var in list body)
+    //         (let ( (i (gen-sym 0)) )
+    //             '(loop (< ,i (len list))
+    //                 (set var (nth ,i list))
+    //                 (do body))))
+        
+    //     ")?;
 
     //env.run_main()?;
+
+    // env.add_src(
+    //     "
+    //     (macro += (num incr)
+    //         '(set ,num (+ ,num ,incr)))
+
+    //     "
+    // )?;
+
+    env.add_src(
+    "
+        (macro apply (f args)
+            (let ((cpy args))
+                (prepend f cpy)
+                (eval cpy)))        
+    ")?;
+
     env.run_repl()?;
 
     Ok(())

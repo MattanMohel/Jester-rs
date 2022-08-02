@@ -1,5 +1,7 @@
 
-use super:: {
+use std::ops::Deref;
+
+use super::{
     nodes::Node,
 
     env::{
@@ -16,9 +18,15 @@ use super:: {
         FnBridge, 
         FnStatic, 
         Bridge, 
-        Static, 
+        Static, FnMacro, 
     }, 
 };
+
+#[derive(Clone)]
+pub struct Quote {
+    pub obj: Shared<Obj>, 
+    pub evaled: bool
+}
 
 #[derive(Clone)]
 pub enum Obj {
@@ -29,19 +37,20 @@ pub enum Obj {
     I64(i64),
     F32(f32),
     F64(f64),
-
     Bool(bool),
 
-    // heaps
+    // heap
     Str(String),
+
+    List(Node),
+    Quote(Shared<Obj>),
 
     // functions
     FnStatic(FnStatic),
     FnNative(FnNative),
     FnBridge(FnBridge),
 
-    Node(Node),
-    Lazy(Shared<Obj>),
+    FnMacro(FnMacro),
 
     Nil(),
 }
@@ -53,6 +62,7 @@ impl Default for Obj {
 }
 
 impl Obj {
+    // TODO: make it actually const
     pub fn new_const<T: TypeId>(val: T) -> Obj {
         val.into_obj()
     }
@@ -75,6 +85,18 @@ impl Obj {
     pub fn set_to<T: TypeId>(&mut self, other: T) {
         *self = other.into_obj();
     } 
+
+    pub fn from_string(src: &String) -> Obj {    
+        if let Ok(is_i32) = src.parse::<i32>() {
+            return Obj::I32(is_i32)
+        }
+        
+        if let Ok(is_f32) = src.parse::<f32>() {
+            return Obj::F32(is_f32)
+        }
+    
+        Obj::Nil()
+    }
     
     pub fn to_string(&self, env: &Env) -> String {
         match self {
@@ -87,24 +109,32 @@ impl Obj {
             Obj::Str(x) => x.clone(),
             Obj::Bool(x) => x.to_string(),
 
-            Obj::Lazy(x) => match env.symbol_id(x) {
-                Some(sym) => sym,
-                None => String::from("unknown-symbol")
-            },
-
-            Obj::Node(node) => format!("({})", node.into_iter()
-                .fold(String::new(), |acc, o| {
-                    if acc.is_empty() {
-                        format!("{}", o.to_string(env))
-                    } else {
-                        format!("{} {}", acc, o.to_string(env))
-                    }})),
-
-            Obj::FnStatic(_) => "<static>".to_string(),
-            Obj::FnNative(_) => "<native>".to_string(),
-            Obj::FnBridge(_) => "<bridge>".to_string(),
+            Obj::FnStatic(_) => "<static-fn>".to_string(),
+            Obj::FnNative(_) => "<native-fn>".to_string(),
+            Obj::FnBridge(_) => "<bridge-fn>".to_string(),
+            Obj::FnMacro(_) => "<macro>".to_string(),
             
             Obj::Nil() => String::from("nil"),     
+
+            Obj::Quote(x) => {
+                if let Obj::List(_) = x.borrow().deref() {
+                    x.borrow().to_string(env).to_uppercase()
+                } 
+                else {
+                    match env.symbol_id(x) {
+                        Some(s) => s.to_uppercase(),
+                        None => "<UNKOWN-SYM>".to_string()
+                    }
+                }
+            }
+
+            Obj::List(node) => format!("({})", node.into_iter().fold(String::new(), |acc, o| {
+                if acc.is_empty() {
+                    format!("{}", o.to_string(env))
+                } else {
+                    format!("{} {}", acc, o.to_string(env))
+                }
+            })),
         }
     }
 }

@@ -1,31 +1,61 @@
 use std::ops::Deref;
 
 use crate::core::{
-    env::Env, 
-    err::JtsErr,
+    env::{
+        Env, 
+        Shared, 
+        new_shared
+    }, 
+    err::{
+        JtsErr,
+        JtsErrType::*
+    },
     objects::Obj, 
-    functions::FnNative, 
+    functions::{FnNative, FnMacro}, types::TypeId 
 };
 
 impl Env {
     pub fn std_lib(&mut self) -> JtsErr {
-        // constant true value
+        //@decl T
+        //@doc
+        // the constant boolean value 'True'
         self.add_symbol("T", Obj::new_const(true))?;
-        // constant false value
+
+        //@decl F
+        //@doc 
+        // the constant boolean value 'False'
         self.add_symbol("F", Obj::new_const(false))?;
-        // constant pi value
+
+        //@dec const pi
+        //@doc the constant f64 value 'PI,' equal to 3.14159265
         self.add_symbol("pi", Obj::new_const::<f64>(3.1415926535))?;
 
-        // (set target value)
-        // sets target to a copy of value
+        //@decl set
+        //@params
+        // ('set setter)
+        //@return
+        // the value of setter
+        //@doc
+        // sets 'set' to the value of 'setter'
         self.add_symbol("set", Obj::new_bridge(|env, node| {
-            let res = env.eval(node.get(1)?.deref())?;
-            node.get_mut(0)?.set(&res);
-            Ok(res)
+            let setter = env.eval(node.get(1)?.deref())?;
+            node.get_mut(0)?.set(&setter);
+            Ok(setter)
         }))?;
 
-        // (defun symbol (args) body)
-        // sets target to a copy of value
+        //@decl defun
+        //@params
+        // ('func '(params..) 'body)
+        //@return
+        // the defined function symbol
+        //@doc
+        // creates a native function named 'symbol' which recieves
+        // 'params' as arguments and outputs the evaluation of 'body'
+        //@example
+        // (defun add (a b)
+        //     (+ a b))
+        //
+        // (assert-eq (add 10 20) 30)
         self.add_symbol("defun", Obj::new_bridge(|_, node| {
             let native = FnNative {
                 params: node.get(1)?.is_node()?.clone(),
@@ -36,63 +66,173 @@ impl Env {
             Ok(node.get(0)?.clone())
         }))?;
 
-        // (let ( (args) ) body)
-        // creates a lexical scope and evaluates
-        // the body in respect to the new bindings
-        self.add_symbol("let", Obj::new_bridge(|env, node| {    
-            let elem = node.shift()?;
-            let shared = elem.borrow();
-            let params = shared.is_node()?.into_iter_from(0);
+        self.add_symbol("macro", Obj::new_bridge(|_, node| {
+            let fn_macro = FnMacro {
+                params: node.get(1)?.is_node()?.clone(),
+                body: node.into_node_from(2)
+            };
 
-            params.anonymous_scope(|| {
-                node.progn(|obj| { env.eval(obj.deref()) })
-            })
+            node.get_mut(0)?.set_to(fn_macro);
+            Ok(node.get(0)?.clone())
         }))?;
 
-        // (do body)
-        // a progn which evaluates all its elements
-        // and returns the evaluation of its last
+        //@decl let
+        //@params
+        // ('func '( (args values).. ) 'body)
+        //@return 
+        // the evaluation of 'body'
+        //@doc 
+        // creates a lexical scope bounding 'args' to their
+        // respective 'values'. 'body' is then evaluated in respect
+        // to 'args' and returned. Following its execution, all 'args'
+        // are reverted to their previous values
+        //@example 
+        // (set a 1)
+        // (set b 2)
+        // (set c 
+        //     (let (( a 10 )
+        //           ( b 20 ))
+        // 
+        //         (+ a b)))
+        // 
+        // (assert-eq a 1)
+        // (assert-eq b 2)
+        // (assert-eq c 30)
+        self.add_symbol("let", Obj::new_bridge(|env, node| {    
+            let args = node.shift()?;
+            let args = args.deref().borrow();
+            let args = args.is_node()?.into_iter();
+
+            args.anonymous_scope(env, || node.progn(|obj| env.eval(obj.deref()) ) )
+        }))?;
+
+        //@decl do
+        //@params
+        //('body...)
+        //@return
+        // the evaluation of 'body'
+        //@doc
+        // takes variable amounts of expressions, evluates them, and returns 
+        // the evaluation of the final expression
+        //@example
+        // (set c (do
+        //            (set a 10)
+        //            (set b 20)
+        //            (+ a b)))
+        //
+        // (assert-eq c 30)
         self.add_symbol("do", Obj::new_bridge(|env, node| {    
             node.progn(|obj| { env.eval(obj.deref()) })
         }))?;
 
-        // (= value cmpr)
-        // returns boolean value of expreesion 'value == cmpr'
+        //@decl =
+        //@params
+        // (a b)
+        //@return
+        // the boolean comparison of 'a' and 'b'
+        //@doc
+        // compares 'a' and 'b' for equality
         self.add_symbol("=", Obj::new_bridge(|env, node| {
             let res = Obj::eq(&env.eval(node.get(0)?.deref())?, &env.eval(node.get(1)?.deref())?)?;
             Ok(Obj::new_const(res))
         }))?;
 
-        // (< value cmpr)
-        // returns boolean value of expreesion 'value < cmpr'
+        //@decl <
+        //@params
+        // (a b)
+        //@return
+        // the boolean comparison of 'a' and 'b'
+        //@doc
+        // compares if 'a' is less than 'b'
         self.add_symbol("<", Obj::new_bridge(|env, node| {
             let res = Obj::le(&env.eval(node.get(0)?.deref())?, &env.eval(node.get(1)?.deref())?)?;
             Ok(Obj::new_const(res))
         }))?;
 
-        // (<= value cmpr)
-        // returns boolean value of expreesion 'value <= cmpr'
+        //@decl <=
+        //@params
+        // (a b)
+        //@return
+        // the boolean comparison of 'a' and 'b'
+        //@doc
+        // compares if 'a' is less than or equal to 'b'
         self.add_symbol("<=", Obj::new_bridge(|env, node| {
             let res = Obj::le_eq(&env.eval(node.get(0)?.deref())?, &env.eval(node.get(1)?.deref())?)?;
             Ok(Obj::new_const(res))
         }))?;
 
-        // (> value cmpr)
-        // returns boolean value of expreesion 'value > cmpr'
+        //@decl >
+        //@params
+        // (a b)
+        //@return
+        // the boolean comparison of 'a' and 'b'
+        //@doc
+        // compares if 'a' is greater than 'b'
         self.add_symbol(">", Obj::new_bridge(|env, node| {
             let res = !Obj::le_eq(&env.eval(node.get(0)?.deref())?, &env.eval(node.get(1)?.deref())?)?;
             Ok(Obj::new_const(res))
         }))?;
 
-        // (>= value cmpr)
-        // returns boolean value of expreesion 'value >= cmpr'
+        //@decl <
+        //@params
+        // (a b)
+        //@return
+        // the boolean comparison of 'a' and 'b'
+        //@doc
+        // compares if 'a' is greater than or equal to 'b'
         self.add_symbol(">=", Obj::new_bridge(|env, node| {
             let res = !Obj::le(&env.eval(node.get(0)?.deref())?, &env.eval(node.get(1)?.deref())?)?;
             Ok(Obj::new_const(res))
         }))?;
 
-        // (loop cond body)
-        // loops over body while cond is true
+        //@decl assert
+        //@params
+        // (a)
+        //@return
+        // true is 'a' is true, or error
+        //@doc
+        // asserts 'a' is equal to True
+        self.add_symbol("assert", Obj::new_bridge(|env, node| {
+            let res = Obj::eq(&env.eval(node.get(0)?.deref())?, &env.eval(node.get(1)?.deref())?)?;
+
+            if res {
+                Ok(Obj::Bool(true))
+            } else {
+                Err(RuntimeAssert)
+            }
+        }))?;
+
+        //@decl assert-eq
+        //@params
+        // (a b)
+        //@return
+        // true is 'a' and 'b' are equal, or error
+        //@doc
+        // asserts equality of 'a' and 'b'
+        self.add_symbol("assert-eq", Obj::new_bridge(|env, node| {
+            let res = Obj::eq(&env.eval(node.get(0)?.deref())?, &env.eval(node.get(1)?.deref())?)?;
+
+            if res {
+                Ok(true.into_obj())
+            } else {
+                Err(RuntimeAssert)
+            }
+        }))?;
+
+        //@decl loop
+        //@params
+        // ('cond 'body..)
+        //@return
+        // the final evaluation of body
+        //@doc
+        // loops and evluates 'body' while 'cond' remains true
+        //@example
+        // (set i 0)
+        //
+        // (loop (< i 10)
+        //     (+= i i))
+        //
+        // (assert-eq i 10)
         self.add_symbol("loop", Obj::new_bridge(|env, node| {
             let mut res = Obj::Nil();
             let cond = node.get(0)?;
@@ -103,46 +243,83 @@ impl Env {
             Ok(res)
         }))?;
 
-        // (quote obj)
-        // returns a quoted 'obj'
+        //@decl gensym
+        //@params
+        // (value-init)
+        //@return
+        // symbol of the generated symbol
+        //@doc
+        // generates a garaunteed-unique symbol and initializes 
+        // its value to t0 'value-init'
+        self.add_symbol("gen-sym", Obj::new_bridge(|env, node| unsafe {
+            println!("gen");
+            let val = env.eval(node.get(0)?.deref())?;
+            Ok(env.generate_symbol(val)?.into_obj())
+        }))?;
+
+        //@decl quote
+        //@params
+        // (object)
+        //@return
+        // the quoted symbol of 'object'
         self.add_symbol("quote", Obj::new_bridge(|_, node| {
-            Ok(Obj::new_const(node.get_shared(0)?))
-        }))?;
+            Ok(node.get_shared(0)?.into_obj())
+        }))?;  
+        
+        //@decl eval
+        //@params
+        // (to-eval)
+        //@return
+        // the evaluated form of 'to-eval'
+        //@example
+        // (set a
+        //     (eval '(+ 10 20)))
+        //
+        // (assert-eq a 30)
+        self.add_symbol("eval", Obj::new_bridge(|env, node| {     
+            fn unquote(env: &Env, obj: &Shared<Obj>) -> JtsErr<Shared<Obj>> {
+                match &obj.deref().borrow().deref() {
+                    Obj::List(node) => {
+                        let res = node.into_iter().try_map_collect_shared(|e| unquote(env, &e) )?;
+                        Ok(new_shared(res.into_obj()))
+                    }
+                    Obj::Quote(quote) => Ok(quote.clone()),
+                    _ => Ok(obj.clone())
+                }
+            }
 
-        // (eval obj)
-        // returns an evaluated 'obj'
-        //  - used to evaluate quote expressions 
-        self.add_symbol("eval", Obj::new_bridge(|env, node| {
-            let res = env.eval(node.get(0)?.deref())?;
+            let obj = env.eval(node.get(0)?.deref())?;
 
-            match &res {
-                Obj::Lazy(lazy) => Ok(env.eval(lazy.borrow().deref())?),
-                _ => Ok(res)
+            match &obj {
+                Obj::List(node) => {
+                    let res = node.into_iter().try_map_collect_shared(|e| {
+                        unquote(env, &e)
+                    })?;
+
+                    env.eval(&res.into_obj())
+                },
+                Obj::Quote(quote) => Ok(quote.deref().borrow().clone()),
+                _ => Ok(obj)
             }
         }))?;
 
-        // (if cond if-true if-false)
-        // executes 'if-true' if 'cond' is true, 'if-false' otherwise
-        self.add_symbol("match", Obj::new_bridge(|env, node| {
-            let cond = *env.eval(node.get(0)?.deref())?.is_bool()?;
-            if cond {
-                env.eval(node.get(1)?.deref())
-            } else {
-                env.eval(node.get(2)?.deref())
-            }
-        }))?;
-
-        // (if cond if-true if-false)
-        // executes 'if-true' if 'cond' is true, 'if-false' otherwise
+        //@decl if
+        //@params
+        // (cond 'if-true ( 'if-false nil ))
+        //@return
+        // the evaluation of 'if-true' if 'cond' is True or the  
+        // evaluation of 'if-false' otherwise
         self.add_symbol("if", Obj::new_bridge(|env, node| {
             let cond = *env.eval(node.get(0)?.deref())?.is_bool()?;
             if cond {
                 env.eval(node.get(1)?.deref())
             } else {
-                env.eval(node.get(2)?.deref())
+                match node.get(2) {
+                    Ok(if_false) => env.eval(if_false.deref()),
+                    Err(_) => Ok(Obj::Nil())
+                }
             }
         }))?;
-
         Ok(())
     }
 }

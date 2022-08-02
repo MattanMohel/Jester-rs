@@ -6,4 +6,5 @@ pub mod modules;
 pub mod nodes;
 pub mod objects;
 pub mod operations;
+pub mod repl;
 pub mod types;

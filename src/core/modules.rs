@@ -49,10 +49,10 @@ impl Mod {
         Ok(())
     }
 
-    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> JtsErr {
+    pub fn add_symbol(&mut self, symbol: &String, value: &Shared<Obj>) -> JtsErr<Shared<Obj>> {
         self.symbols.contains_key(symbol).as_result_rev((), DuplicateSymbol)?;
         self.symbols.insert(symbol.clone(), value.clone());
-        Ok(())
+        Ok(self.symbol(symbol).unwrap())
     }
 
     pub fn add_body(&mut self, body: Node) {

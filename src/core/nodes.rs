@@ -18,12 +18,13 @@ use super::{
     
     err::{
         JtsErr, 
-        JtsErrType::*, AsResult
-    },
+        JtsErrType::*, 
+        AsResult
+    }, types::TypeId,
 };
 
 #[derive(Clone)]
-pub struct Node{
+pub struct Node {
     pub args: Vec<Shared<Obj>>,
 }
 
@@ -194,7 +195,7 @@ impl<'a> NodeIter<'a> {
         (self.len() != args.len()).into_result(UnmatchedParamLists)?;
 
         // store previous argument values
-        let prev = self.try_collect(|obj| { env.eval(obj.deref()) })?;
+        let prev = self.try_map_collect(|obj| { env.eval(obj.deref()) })?;
 
         // apply passed argument values
         for i in 0..self.len() {
@@ -214,6 +215,34 @@ impl<'a> NodeIter<'a> {
 
         res
     }
+
+    pub fn macro_scope<F>(&self, env: &Env, args: &mut NodeIter, mut f: F) -> JtsErr<Obj>
+    where F: FnMut() -> JtsErr<Obj> 
+{
+    // assert matching lengths of params and args
+    (self.len() != args.len()).into_result(UnmatchedParamLists)?;
+
+    // store previous argument values
+    let prev = self.try_map_collect(|obj| { env.eval(obj.deref()) })?;
+
+    // apply passed argument values
+    for i in 0..self.len() {
+        // store evaluation and set to prevent
+        // borrow issues where the evaluations
+        // needs to borrow a mutably borrowed value
+        let res = args.get_shared(i)?;
+        self.get_mut(i)?.set(&res.into_obj());
+    }
+
+    let res = f();
+
+    // reset argument values to previous
+    for i in 0..self.len() {
+        self.get_mut(i)?.set(prev.get(i)?.deref());
+    }
+
+    res
+}
 
     /// creates a lexical scope for self's elements where self 
     /// provides both the parameters and the arguments. The closure 
@@ -235,13 +264,13 @@ impl<'a> NodeIter<'a> {
     /// - evaluate (+ a b) => (+ 1 2)
     /// - return 3 and reset a = nil and b = nil
     
-    pub fn anonymous_scope<F>(&self, mut f: F) -> JtsErr<Obj>
+    pub fn anonymous_scope<F>(&self, env: &Env, mut f: F) -> JtsErr<Obj>
         where F: FnMut() -> JtsErr<Obj> 
     {
         // store previous argument values
-        let prev = self.try_collect(|obj| {
+        let prev = self.try_map_collect(|obj| {
             match obj.deref() {
-                Obj::Node(node) => Ok(node.get(0)?.clone()),
+                Obj::List(node) => Ok(node.get(0)?.clone()),
                 _ => Ok(obj.clone())
             }
         })?;
@@ -249,7 +278,7 @@ impl<'a> NodeIter<'a> {
         // apply passed argument values
         for obj in self.args.iter() {
             match obj.borrow_mut().deref() {
-                Obj::Node(node) => node.get_mut(0)?.set(node.get(1)?.deref()),
+                Obj::List(node) => node.get_mut(0)?.set(&env.eval(node.get(1)?.deref())?),
                 _ => obj.borrow_mut().set_to(())
             }    
         }
@@ -259,7 +288,7 @@ impl<'a> NodeIter<'a> {
         // reset argument values to previous
         for (obj, prev) in self.args.iter().zip(prev.into_iter()) {
             match obj.borrow_mut().deref() {
-                Obj::Node(node) => node.get_mut(0)?.set(prev.deref()),
+                Obj::List(node) => node.get_mut(0)?.set(prev.deref()),
                 _ => obj.borrow_mut().set(prev.deref())
             }    
         }
@@ -299,13 +328,34 @@ impl<'a> NodeIter<'a> {
     /// a closure returning a Result. If an error is
     /// ever found, the collection ends and the error
     /// propogated
-    pub fn try_collect<F>(&self, mut f: F) -> JtsErr<Node> 
+    pub fn try_map_collect<F>(&self, mut f: F) -> JtsErr<Node> 
         where F: FnMut(Ref<'_, Obj>) -> JtsErr<Obj>
     {
         let mut err = Ok(());
         let args = self.scan(&mut err, |e, obj| {
                 match f(obj) {
                     Ok(obj) => Some(new_shared(obj)),
+
+                    Err(err) => {
+                        **e = Err(err);
+                        None
+                    }
+                }
+            })
+            .collect();
+        
+        err?;
+        Ok(Node {args})
+    } 
+
+    // TODO: write description
+    pub fn try_map_collect_shared<F>(&self, mut f: F) -> JtsErr<Node> 
+    where F: FnMut(&Shared<Obj>) -> JtsErr<Shared<Obj>>
+    {
+        let mut err = Ok(());
+        let args = self.args.iter().scan(&mut err, |e, obj| {
+                match f(obj) {
+                    Ok(obj) => Some(obj),
 
                     Err(err) => {
                         **e = Err(err);

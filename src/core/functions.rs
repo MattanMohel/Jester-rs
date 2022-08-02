@@ -29,7 +29,7 @@ pub trait Callable: CloneCallable {
 
 /// makes ```Box<dyn Clone>``` clonable
 pub trait CloneCallable {
-    fn clone_foo<'a>(&self) -> Box<dyn Callable>;
+    fn clone_callable<'a>(&self) -> Box<dyn Callable>;
 }
 
 ////////////////////////////////
@@ -39,14 +39,14 @@ pub trait CloneCallable {
 impl<T> CloneCallable for T
     where T: Callable + Clone + 'static,
 {
-    fn clone_foo(&self) -> Box<dyn Callable> {
+    fn clone_callable(&self) -> Box<dyn Callable> {
         Box::new(self.clone())
     }
 }
 
 impl Clone for Box<dyn Callable> {
     fn clone(&self) -> Self {
-        self.clone_foo()
+        self.clone_callable()
     }
 }
 
@@ -77,6 +77,20 @@ impl FnNative {
             self.body.into_iter()
                 .progn(|obj| { env.eval(obj.deref()) })
         })
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct FnMacro {
+    pub body: Node,
+    pub params: Node,
+}
+
+impl FnMacro {
+    #[inline]
+    pub fn invoke(&self, env: &Env, args: &mut NodeIter) -> JtsErr<Obj> {
+        self.params.into_iter().macro_scope(env, args, || self.body.into_iter()
+            .progn(|obj| env.eval(obj.deref()) ) )
     }
 }
 

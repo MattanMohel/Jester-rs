@@ -94,58 +94,38 @@ pub type JtsErr<T = ()> = Result<T, JtsErrType>;
 
 #[derive(Debug)]
 pub enum JtsErrType {
-    /// asserts that a symbol cannot
-    /// be found in the given context
+    /// standard Rust IO error
+    IoErr(String),
+    /// symbol not found in current context
     MissingSymbol,
-    /// asserts that a symbol is a 
-    /// duplicate, meaning its already
-    /// defined in the given context
+    /// specified symbol already defined
     DuplicateSymbol,
-    /// asserts that a symbol is disallowed,
-    /// meaning that it conflicts with possible
-    /// internal symbols such as 'gensym'
+    /// symbol structure is not allowed
     DisallowedSymbol,
-    /// asserts that a module cannot
-    /// be found in the given context
+    /// module not found in current context
     MissingModule,
-    /// asserts that a module is already
-    /// defined in the environment
+    /// specified module already defined
     DuplicateModule, 
-    /// asserts that an input's parentheses 
-    /// were unbalanced, meaning the ratio of 
-    /// right to left parentheses was non-equal
+    /// counts of '(' and ')' are not equal
     UnbalancedParentheses,  
-    /// an Io error represented in Jts for
-    /// error modularity
-    IoErr,
-    /// asserts that the prescribed entry 
-    /// module could not be found. Most usually
-    /// the entry module is 'main'
-    NoEntry,
-    /// asserts that a given pair of types
-    /// do not match and could not be operated
-    /// upon correctly in the given context
-    MismatchedTypes,
-    /// asserts that a given pair of types
-    /// could not be compared
-    IncomparableTypes,
-    /// asserts that a given type could not
-    /// be cast into the other successfully 
-    ErrCastTypes,
-    /// asserts that the program attempted to
-    /// mutate a constant value
+    /// given types cannot be inter-operated
+    MismatchedType,
+    /// given types cannot be compared
+    UncomparableType,
+    /// given type cannot be cast into another
+    ErrCastType,
+    /// assigned to const value
     ConstAssign,
-    /// asserts that the program attempted to 
-    /// invoke a non-callable value
-    NonCallable,
-    /// asserts that the program attempted to 
-    /// query a value from outside the bounds
-    /// of a given collection
+    /// queried an index out of bounds from its collection
     OutOfBounds,
-    /// asserts that a given input parameter 
-    /// list to a function invocation could 
-    /// not match with the function signature
+    /// input params do not match expected params
     UnmatchedParamLists,
+    /// placement of special op erroneous
+    ErrSpecialOp,
+    /// attempted to access and uninitialized env
+    UninitEnv,
+    /// a runtime assert
+    RuntimeAssert
 }
 
 impl Error for JtsErrType {}
@@ -157,7 +137,7 @@ impl Display for JtsErrType {
 }
 
 impl From<io::Error> for JtsErrType {
-    fn from(_: io::Error) -> Self {
-        Self::IoErr
+    fn from(err: io::Error) -> Self {
+        Self::IoErr(err.to_string())
     }
 }
