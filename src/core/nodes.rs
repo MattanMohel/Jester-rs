@@ -129,7 +129,7 @@ impl<'a> NodeIter<'a> {
     /// index, allowing for both mutable and immutable borrow
     pub fn get_shared(&self, i: usize) -> JtsErr<Shared<Obj>> {
         match self.args.get(self.offset + i) {
-            Some(obj) => Ok(obj.clone()),
+            Some(shared) => Ok(shared.clone()),
             None => Err(OutOfBounds)
         }
     } 
@@ -217,32 +217,32 @@ impl<'a> NodeIter<'a> {
     }
 
     pub fn macro_scope<F>(&self, env: &Env, args: &mut NodeIter, mut f: F) -> JtsErr<Obj>
-    where F: FnMut() -> JtsErr<Obj> 
-{
-    // assert matching lengths of params and args
-    (self.len() != args.len()).into_result(UnmatchedParamLists)?;
+        where F: FnMut() -> JtsErr<Obj> 
+    {
+        // assert matching lengths of params and args
+        (self.len() != args.len()).into_result(UnmatchedParamLists)?;
 
-    // store previous argument values
-    let prev = self.try_map_collect(|obj| { env.eval(obj.deref()) })?;
+        // store previous argument values
+        let prev = self.try_map_collect(|obj| { env.eval(obj.deref()) })?;
 
-    // apply passed argument values
-    for i in 0..self.len() {
-        // store evaluation and set to prevent
-        // borrow issues where the evaluations
-        // needs to borrow a mutably borrowed value
-        let res = args.get_shared(i)?;
-        self.get_mut(i)?.set(&res.into_obj());
+        // apply passed argument values
+        for i in 0..self.len() {
+            // store evaluation and set to prevent
+            // borrow issues where the evaluations
+            // needs to borrow a mutably borrowed value
+            let res = args.get_shared(i)?.into_obj();
+            self.get_mut(i)?.set(&res);
+        }
+
+        let res = f();
+
+        // reset argument values to previous
+        for i in 0..self.len() {
+            self.get_mut(i)?.set(prev.get(i)?.deref());
+        }
+
+        res
     }
-
-    let res = f();
-
-    // reset argument values to previous
-    for i in 0..self.len() {
-        self.get_mut(i)?.set(prev.get(i)?.deref());
-    }
-
-    res
-}
 
     /// creates a lexical scope for self's elements where self 
     /// provides both the parameters and the arguments. The closure 

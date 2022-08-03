@@ -82,10 +82,10 @@ impl TypeId for Node {
 impl TypeId for Shared<Obj> {
     fn into_obj(self) -> Obj {
         if let Obj::List(node) = self.borrow().deref() {
-            let args = node.args.iter().map(|arg| { 
-                    new_shared(arg.clone().into_obj()) 
-                })
-                .collect();
+            let args = 
+                node.args.iter()
+                    .map(|arg| new_shared(arg.clone().into_obj()) )
+                    .collect();
             
             return Obj::List(Node { args: args });
         }

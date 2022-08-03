@@ -45,8 +45,27 @@ fn main() -> JtsErr {
         (macro apply (f args)
             (let ((cpy args))
                 (prepend f cpy)
-                (eval cpy)))        
+                cpy))        
     ")?;
+
+    env.add_src(
+    "
+        (macro += (a b)
+            '(set ,a (+ ,a ,b)))       
+    ")?;
+
+    env.add_src(
+    "
+        (macro for (var in lst bdy)
+            (let ((i (gensym 0)))
+                '(let ((,var ,nil))
+                    (loop (< ,i (len ,lst))
+                        (set ,var (nth ,i ,lst))
+                        (do ,bdy)
+                        (set ,i (+ ,i ,1))))))
+                
+    ")?;
+
 
     env.run_repl()?;
 

@@ -89,8 +89,13 @@ pub struct FnMacro {
 impl FnMacro {
     #[inline]
     pub fn invoke(&self, env: &Env, args: &mut NodeIter) -> JtsErr<Obj> {
-        self.params.into_iter().macro_scope(env, args, || self.body.into_iter()
-            .progn(|obj| env.eval(obj.deref()) ) )
+        // TODO: eval_shared the result!!
+        let res = 
+            self.params.into_iter().macro_scope(env, args, || self.body.into_iter()
+                .progn(|obj| env.eval(obj.deref()) ) )?;
+
+        // TODO: be able to see expansion of expr => return to see quote Ok(res)
+        env.eval_shared(&res)
     }
 }
 

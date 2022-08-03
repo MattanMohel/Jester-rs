@@ -1,5 +1,7 @@
 use std::ops::Deref;
 
+use crate::core::{env::{new_shared, Shared}, types::TypeId, nodes::NodeIter};
+
 use super::{
     functions::Callable,
     objects::Obj, 
@@ -38,5 +40,31 @@ impl Env {
             Obj::FnMacro(ref macro_fn) => macro_fn.invoke(self, &mut node.into_iter_from(1)),
             _ => unreachable!()
         } 
+    }
+  
+    pub fn eval_shared(&self, obj: &Obj) -> Result<Obj, crate::core::err::JtsErrType> {     
+    
+        fn clone_shared(env: &Env, obj: &Shared<Obj>) -> JtsErr<Shared<Obj>> {   
+            match &obj.borrow().deref() {
+                Obj::List(node) => {
+                    let res = node.into_iter().try_map_collect_shared(|e| clone_shared(env, &e) )?;
+                    Ok(new_shared(res.into_obj()))
+                }
+                Obj::Quote(quote) => Ok(quote.clone()),
+                _ => Ok(obj.clone())
+            }
+        }
+
+        let obj = self.eval(obj)?;
+        
+        match &obj {
+            Obj::List(node) => {
+                let res = node.into_iter().try_map_collect_shared(|e| clone_shared(self, &e) )?;
+                self.eval(&res.into_obj())
+            },
+         
+            Obj::Quote(quote) => Ok(quote.borrow().clone()),           
+            _ => Ok(obj)
+        }
     }
 }

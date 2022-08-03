@@ -1,17 +1,17 @@
 use std::ops::Deref;
 
 use crate::core::{
-    env::{
-        Env, 
-        Shared, 
-        new_shared
-    }, 
+    env::Env,
     err::{
         JtsErr,
         JtsErrType::*
     },
     objects::Obj, 
-    functions::{FnNative, FnMacro}, types::TypeId 
+    functions::{
+        FnNative, 
+        FnMacro
+    }, 
+    types::TypeId 
 };
 
 impl Env {
@@ -251,7 +251,7 @@ impl Env {
         //@doc
         // generates a garaunteed-unique symbol and initializes 
         // its value to t0 'value-init'
-        self.add_symbol("gen-sym", Obj::new_bridge(|env, node| unsafe {
+        self.add_symbol("gensym", Obj::new_bridge(|env, node| unsafe {
             println!("gen");
             let val = env.eval(node.get(0)?.deref())?;
             Ok(env.generate_symbol(val)?.into_obj())
@@ -277,30 +277,7 @@ impl Env {
         //
         // (assert-eq a 30)
         self.add_symbol("eval", Obj::new_bridge(|env, node| {     
-            fn unquote(env: &Env, obj: &Shared<Obj>) -> JtsErr<Shared<Obj>> {
-                match &obj.deref().borrow().deref() {
-                    Obj::List(node) => {
-                        let res = node.into_iter().try_map_collect_shared(|e| unquote(env, &e) )?;
-                        Ok(new_shared(res.into_obj()))
-                    }
-                    Obj::Quote(quote) => Ok(quote.clone()),
-                    _ => Ok(obj.clone())
-                }
-            }
-
-            let obj = env.eval(node.get(0)?.deref())?;
-
-            match &obj {
-                Obj::List(node) => {
-                    let res = node.into_iter().try_map_collect_shared(|e| {
-                        unquote(env, &e)
-                    })?;
-
-                    env.eval(&res.into_obj())
-                },
-                Obj::Quote(quote) => Ok(quote.deref().borrow().clone()),
-                _ => Ok(obj)
-            }
+            env.eval_shared(node.get(0)?.deref())
         }))?;
 
         //@decl if
